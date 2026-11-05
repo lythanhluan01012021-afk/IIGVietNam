@@ -26,10 +26,13 @@ app.get(/^\/assets\/([1-5]\.png)$/, (req, res) => {
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-const EXCEL_PATH = path.join(__dirname, 'BM01-danh-sach-TS-vong-thi-cap-co-so.xlsx');
-const STUDENTS_EXCEL_PATH = path.join(__dirname, 'CSDL-Thi-Sinh-Dang-Ky-THPT-Nguyen-Sinh-Sac.xlsx');
+const IS_VERCEL = Boolean(process.env.VERCEL);
+const WORK_DIR = IS_VERCEL ? '/tmp' : __dirname;
+const EXCEL_PATH = path.join(WORK_DIR, 'BM01-danh-sach-TS-vong-thi-cap-co-so.xlsx');
+const STUDENTS_EXCEL_PATH = path.join(WORK_DIR, 'CSDL-Thi-Sinh-Dang-Ky-THPT-Nguyen-Sinh-Sac.xlsx');
 const TEMPLATE_PATH = path.join(__dirname, 'data', 'BM01-template.xlsx');
-const DB_JSON_PATH = path.join(__dirname, 'data', 'db-state.json');
+const DB_JSON_PATH = IS_VERCEL ? path.join('/tmp', 'db-state.json') : path.join(__dirname, 'data', 'db-state.json');
+const INITIAL_DB_JSON_PATH = path.join(__dirname, 'data', 'db-state.json');
 const DRIVE_FOLDER_ID = '1a_hJhS5wetmMRktY6qfSVCqNN3pQUuCb';
 const DRIVE_FOLDER_URL = `https://drive.google.com/drive/folders/${DRIVE_FOLDER_ID}?usp=sharing`;
 const MOUNTED_DRIVE_DIR = 'G:\\My Drive\\IIGVN';
@@ -38,11 +41,12 @@ const GDRIVE_CMD = 'C:\\Users\\HOANG ANH\\.gemini\\antigravity\\bin\\gdrive.cmd'
 let isWritingExcel = false;
 let lastWriteTimestamp = 0;
 let sseClients = [];
+let hasHydratedFromCloud = false;
 
 // Cấu trúc dữ liệu mặc định cho Trường THPT Nguyễn Sinh Sắc (Phương án B)
 const defaultState = {
   meta: {
-    soGddt: 'Sở Giáo dục và Đào tạo tỉnh An Giang',
+    soGddt: 'tỉnh An Giang',
     nguoiPhuTrach: 'Thầy/Cô Phụ trách CNTT & Đoàn Trường',
     chucVuPhuTrach: 'Cán bộ phụ trách cuộc thi',
     dienThoaiPhuTrach: '02963 822 xxx',
@@ -50,7 +54,7 @@ const defaultState = {
     autoCountFromStudents: true,
     driveFolderId: DRIVE_FOLDER_ID,
     driveFolderUrl: DRIVE_FOLDER_URL,
-    appsScriptUrl: '',
+    appsScriptUrl: 'https://script.google.com/macros/s/AKfycbykh0lOPK04OGlbq-FgocezIIGs1YdJhOypzmB9gZc6Dm9PSYzhOTx8d3WuxxggLHmBAA/exec',
     driveFileId: '',
     driveFileUrl: '',
     lastLocalSync: null,
@@ -76,12 +80,17 @@ const defaultState = {
 let appState = loadInitialState();
 
 function loadInitialState() {
-  if (!fs.existsSync(path.join(__dirname, 'data'))) {
+  if (!IS_VERCEL && !fs.existsSync(path.join(__dirname, 'data'))) {
     fs.mkdirSync(path.join(__dirname, 'data'), { recursive: true });
   }
-  if (fs.existsSync(DB_JSON_PATH)) {
+  const sourceJson = fs.existsSync(DB_JSON_PATH)
+    ? DB_JSON_PATH
+    : fs.existsSync(INITIAL_DB_JSON_PATH)
+    ? INITIAL_DB_JSON_PATH
+    : null;
+  if (sourceJson) {
     try {
-      const saved = JSON.parse(fs.readFileSync(DB_JSON_PATH, 'utf8'));
+      const saved = JSON.parse(fs.readFileSync(sourceJson, 'utf8'));
       return {
         meta: { ...defaultState.meta, ...(saved.meta || {}) },
         bm01Rows: Array.isArray(saved.bm01Rows) && saved.bm01Rows.length > 0 ? saved.bm01Rows : defaultState.bm01Rows,
@@ -95,7 +104,11 @@ function loadInitialState() {
 }
 
 function saveJsonState() {
-  fs.writeFileSync(DB_JSON_PATH, JSON.stringify(appState, null, 2), 'utf8');
+  try {
+    fs.writeFileSync(DB_JSON_PATH, JSON.stringify(appState, null, 2), 'utf8');
+  } catch (e) {
+    console.error('Lỗi lưu db-state.json:', e.message);
+  }
 }
 
 function extractPlainText(cellValue) {
@@ -855,7 +868,7 @@ function broadcastSSE(data) {
 
 // Theo dõi sự thay đổi trực tiếp trên file BM01-danh-sach-TS-vong-thi-cap-co-so.xlsx trong thư mục dự án
 let watchDebounce = null;
-if (fs.existsSync(EXCEL_PATH)) {
+if (!IS_VERCEL && fs.existsSync(EXCEL_PATH)) {
   fs.watch(EXCEL_PATH, (eventType) => {
     if (isWritingExcel) return;
     if (Date.now() - lastWriteTimestamp < 1500) return;
@@ -873,6 +886,15 @@ if (fs.existsSync(EXCEL_PATH)) {
       }
     }, 600);
   });
+}
+
+async function ensureCloudStateLoaded() {
+  if (IS_VERCEL && !hasHydratedFromCloud) {
+    hasHydratedFromCloud = true;
+    try {
+      await pullFromGoogleDrive();
+    } catch (_) {}
+  }
 }
 
 const ADMIN_USER = 'admin';
@@ -914,7 +936,8 @@ app.get('/api/admin/verify', (req, res) => {
 });
 
 // SSE stream để đồng bộ thời gian thực trên mọi thiết bị (Điện thoại / Máy tính)
-app.get('/api/stream', (req, res) => {
+app.get('/api/stream', async (req, res) => {
+  await ensureCloudStateLoaded();
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
@@ -930,12 +953,28 @@ app.get('/api/stream', (req, res) => {
 
 // Lấy toàn bộ trạng thái CSDL (Mẫu BM01 + Danh sách học sinh + Trạng thái đồng bộ)
 app.get('/api/state', async (req, res) => {
+  await ensureCloudStateLoaded();
   res.json({ ok: true, state: appState });
 });
+
+function normalizeDobServer(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, m, d] = s.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) {
+    return `${m[1].padStart(2, '0')}/${m[2].padStart(2, '0')}/${m[3]}`;
+  }
+  return s;
+}
 
 // Học sinh Trường THPT Nguyễn Sinh Sắc đăng ký tham gia
 app.post('/api/students/register', async (req, res) => {
   try {
+    await ensureCloudStateLoaded();
     const {
       fullName,
       dob,
@@ -990,7 +1029,7 @@ app.post('/api/students/register', async (req, res) => {
     const newStudent = {
       id: `NSS-AI-${String(nextNum).padStart(3, '0')}`,
       fullName: String(fullName).trim(),
-      dob: String(dob).trim(),
+      dob: normalizeDobServer(dob),
       gender: String(gender || 'Nam').trim(),
       className: String(className).trim().toUpperCase(),
       cccd: normalizedCccd,
@@ -1018,8 +1057,12 @@ app.post('/api/students/register', async (req, res) => {
       notification: `Chúc mừng ${newStudent.fullName} (Lớp ${newStudent.className}) đã đăng ký thành công!`
     });
 
-    // Đồng bộ nền lên Google Drive
-    syncToGoogleDrive().catch(() => {});
+    // Đồng bộ lên Google Drive (trên Vercel cần await để không bị ngắt tiến trình nền)
+    if (IS_VERCEL) {
+      await syncToGoogleDrive().catch(() => {});
+    } else {
+      syncToGoogleDrive().catch(() => {});
+    }
 
     res.json({
       ok: true,
@@ -1034,6 +1077,7 @@ app.post('/api/students/register', async (req, res) => {
 
 // Cập nhật hoặc xóa thông tin học sinh trong danh sách (Yêu cầu quyền Admin)
 app.put('/api/students/:id', requireAdminAuth, async (req, res) => {
+  await ensureCloudStateLoaded();
   const { id } = req.params;
   const idx = appState.students.findIndex((s) => s.id === id);
   if (idx === -1) return res.status(404).json({ ok: false, message: 'Không tìm thấy thí sinh!' });
@@ -1041,16 +1085,22 @@ app.put('/api/students/:id', requireAdminAuth, async (req, res) => {
   appState.students[idx] = {
     ...appState.students[idx],
     ...req.body,
+    dob: req.body.dob ? normalizeDobServer(req.body.dob) : normalizeDobServer(appState.students[idx].dob),
     id: appState.students[idx].id
   };
 
   await writeToLocalExcel();
   broadcastSSE({ type: 'state_updated', state: appState });
-  syncToGoogleDrive().catch(() => {});
+  if (IS_VERCEL) {
+    await syncToGoogleDrive().catch(() => {});
+  } else {
+    syncToGoogleDrive().catch(() => {});
+  }
   res.json({ ok: true, state: appState });
 });
 
 app.delete('/api/students/:id', requireAdminAuth, async (req, res) => {
+  await ensureCloudStateLoaded();
   const { id } = req.params;
   appState.students = appState.students.filter((s) => s.id !== id);
   appState.students.forEach((s, i) => {
@@ -1062,13 +1112,18 @@ app.delete('/api/students/:id', requireAdminAuth, async (req, res) => {
 
   await writeToLocalExcel();
   broadcastSSE({ type: 'state_updated', state: appState });
-  syncToGoogleDrive().catch(() => {});
+  if (IS_VERCEL) {
+    await syncToGoogleDrive().catch(() => {});
+  } else {
+    syncToGoogleDrive().catch(() => {});
+  }
   res.json({ ok: true, state: appState });
 });
 
 // Cập nhật trực tiếp bảng BM01 (Header + các dòng trường THPT trên giao diện Web)
 app.post('/api/bm01/update', requireAdminAuth, async (req, res) => {
   try {
+    await ensureCloudStateLoaded();
     const { meta, bm01Rows } = req.body;
     if (meta) {
       appState.meta = { ...appState.meta, ...meta };
@@ -1127,12 +1182,14 @@ app.post('/api/sync', requireAdminAuth, async (req, res) => {
 
 // Tải file BM01-danh-sach-TS-vong-thi-cap-co-so.xlsx trực tiếp từ trình duyệt (Giữ nguyên 100% định dạng mẫu gốc)
 app.get('/api/download-bm01', async (req, res) => {
+  await ensureCloudStateLoaded();
   await writeToLocalExcel();
   res.download(EXCEL_PATH, 'BM01-danh-sach-TS-vong-thi-cap-co-so.xlsx');
 });
 
 // Tải file CSDL-Thi-Sinh-Dang-Ky-THPT-Nguyen-Sinh-Sac.xlsx (Danh sách học sinh đăng ký chi tiết)
 app.get('/api/download-students-excel', async (req, res) => {
+  await ensureCloudStateLoaded();
   await writeToLocalExcel();
   res.download(STUDENTS_EXCEL_PATH, 'CSDL-Thi-Sinh-Dang-Ky-THPT-Nguyen-Sinh-Sac.xlsx');
 });
@@ -1149,18 +1206,22 @@ app.get('/api/apps-script-code', (req, res) => {
   res.json({ ok: true, code, folderId: DRIVE_FOLDER_ID, folderUrl: DRIVE_FOLDER_URL });
 });
 
-// Khởi tạo dữ liệu ban đầu vào file BM01-danh-sach-TS-vong-thi-cap-co-so.xlsx khi server chạy
-(async () => {
-  await readFromLocalExcel();
-  await writeToLocalExcel();
-  app.listen(PORT, () => {
-    console.log(`================================================================`);
-    console.log(`🚀 CỔNG THÔNG TIN & ĐĂNG KÝ CUỘC THI AI OR BEHIND 2026 - 2027`);
-    console.log(`🏫 ĐƠN VỊ: TRƯỜNG THPT NGUYỄN SINH SẮC (TÂN CHÂU - AN GIANG)`);
-    console.log(`🌐 Địa chỉ Web: http://localhost:${PORT}`);
-    console.log(`📂 CSDL Local: ${EXCEL_PATH}`);
-    console.log(`☁️  Google Drive: ${DRIVE_FOLDER_URL}`);
-    console.log(`================================================================`);
-  });
-})();
+// Khởi tạo dữ liệu ban đầu vào file BM01-danh-sach-TS-vong-thi-cap-co-so.xlsx khi chạy máy chủ Local
+if (!IS_VERCEL) {
+  (async () => {
+    await readFromLocalExcel();
+    await writeToLocalExcel();
+    app.listen(PORT, () => {
+      console.log(`================================================================`);
+      console.log(`🚀 CỔNG THÔNG TIN & ĐĂNG KÝ CUỘC THI AI OR BEHIND 2026 - 2027`);
+      console.log(`🏫 ĐƠN VỊ: TRƯỜNG THPT NGUYỄN SINH SẮC (TÂN CHÂU - AN GIANG)`);
+      console.log(`🌐 Địa chỉ Web: http://localhost:${PORT}`);
+      console.log(`📂 CSDL Local: ${EXCEL_PATH}`);
+      console.log(`☁️  Google Drive: ${DRIVE_FOLDER_URL}`);
+      console.log(`================================================================`);
+    });
+  })();
+}
+
+module.exports = app;
 

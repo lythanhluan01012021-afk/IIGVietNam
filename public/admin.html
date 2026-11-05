@@ -374,8 +374,29 @@
             <input type="text" id="admStName" class="form-control" required />
           </div>
           <div class="form-group">
-            <label>Ngày sinh (*)</label>
-            <input type="date" id="admStDob" class="form-control" required />
+            <label>Ngày sinh (dd/MM/YYYY) (*)</label>
+            <div class="dob-input-wrap">
+              <input
+                type="text"
+                id="admStDob"
+                class="form-control dob-text-input"
+                inputmode="numeric"
+                maxlength="10"
+                placeholder="dd/MM/YYYY"
+                oninput="autoFormatDobInput(this)"
+                required
+              />
+              <label class="dob-picker-btn" title="Chọn từ lịch">
+                📅
+                <input
+                  type="date"
+                  id="admStDobPicker"
+                  class="dob-hidden-picker"
+                  onchange="syncPickerToDobText(this, 'admStDob')"
+                  tabindex="-1"
+                />
+              </label>
+            </div>
           </div>
           <div class="form-group">
             <label>Lớp (*)</label>

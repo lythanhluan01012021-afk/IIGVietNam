@@ -1,7 +1,7 @@
 // ==================== STATE & GLOBAL VARIABLES ====================
 let clientState = {
   meta: {
-    soGddt: 'Sở Giáo dục và Đào tạo tỉnh An Giang',
+    soGddt: 'tỉnh An Giang',
     nguoiPhuTrach: 'Thầy/Cô Phụ trách CNTT & Đoàn Trường',
     chucVuPhuTrach: 'Cán bộ phụ trách cuộc thi',
     dienThoaiPhuTrach: '02963 822 xxx',
@@ -13,12 +13,14 @@ let clientState = {
   students: []
 };
 
-// ==================== 1. LIVESHOW TRƯỢT TỰ ĐỘNG 5 BANNER ====================
+// ==================== 1. LIVESHOW TRƯỢT TỰ ĐỘNG 5 BANNER & LIGHTBOX PHÓNG TO ====================
 const TOTAL_BANNER_SLIDES = 5;
 const SLIDE_INTERVAL_MS = 5500;
+const BANNER_VERSION = '20261105-2';
 let currentBannerSlide = 0;
 let slideProgress = 0;
 let isSlidePaused = false;
+let currentLightboxSlide = 0;
 
 function updateBannerSlideshowUI() {
   const track = document.getElementById('bannerSlidesTrack');
@@ -49,6 +51,46 @@ function updateSlideProgressBar() {
   }
 }
 
+function openBannerLightbox(index) {
+  currentLightboxSlide = typeof index === 'number' ? index : currentBannerSlide;
+  isSlidePaused = true;
+  updateLightboxUI();
+  document.getElementById('bannerLightboxModal')?.classList.add('open');
+}
+
+function closeBannerLightbox(e) {
+  if (e && e.target && e.target.id !== 'bannerLightboxModal') return;
+  document.getElementById('bannerLightboxModal')?.classList.remove('open');
+  isSlidePaused = false;
+}
+
+function changeLightboxSlide(step) {
+  currentLightboxSlide = (currentLightboxSlide + step + TOTAL_BANNER_SLIDES) % TOTAL_BANNER_SLIDES;
+  goToBannerSlide(currentLightboxSlide);
+  updateLightboxUI();
+}
+
+function goToLightboxSlide(idx) {
+  currentLightboxSlide = (idx + TOTAL_BANNER_SLIDES) % TOTAL_BANNER_SLIDES;
+  goToBannerSlide(currentLightboxSlide);
+  updateLightboxUI();
+}
+
+function updateLightboxUI() {
+  const img = document.getElementById('lightboxBannerImg');
+  const title = document.getElementById('lightboxSlideTitle');
+  if (img) {
+    img.src = `/assets/${currentLightboxSlide + 1}.png?v=${BANNER_VERSION}`;
+  }
+  if (title) {
+    title.textContent = `Banner ${currentLightboxSlide + 1} / ${TOTAL_BANNER_SLIDES} — Cuộc thi AI OR BEHIND 2026-2027`;
+  }
+  const dots = document.querySelectorAll('#lightboxDots .slide-dot');
+  dots.forEach((dot, idx) => {
+    dot.classList.toggle('active', idx === currentLightboxSlide);
+  });
+}
+
 function initBannerSlideshow() {
   const wrap = document.getElementById('heroSlideshow');
   if (!wrap) return;
@@ -69,18 +111,41 @@ function initBannerSlideshow() {
 
   // Hỗ trợ vuốt cảm ứng trên điện thoại
   let touchStartX = 0;
+  let touchStartY = 0;
   wrap.addEventListener('touchstart', (e) => {
     isSlidePaused = true;
     touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
   }, { passive: true });
 
   wrap.addEventListener('touchend', (e) => {
     isSlidePaused = false;
-    const diff = touchStartX - e.changedTouches[0].screenX;
-    if (Math.abs(diff) > 42) {
-      changeBannerSlide(diff > 0 ? 1 : -1);
+    const diffX = touchStartX - e.changedTouches[0].screenX;
+    const diffY = touchStartY - e.changedTouches[0].screenY;
+    if (Math.abs(diffX) > 36 && Math.abs(diffX) > Math.abs(diffY)) {
+      changeBannerSlide(diffX > 0 ? 1 : -1);
     }
   }, { passive: true });
+
+  // Hỗ trợ vuốt ngang trong chế độ phóng to Lightbox
+  const lbModal = document.getElementById('bannerLightboxModal');
+  if (lbModal) {
+    let lbStartX = 0;
+    lbModal.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        lbStartX = e.changedTouches[0].screenX;
+      }
+    }, { passive: true });
+    lbModal.addEventListener('touchend', (e) => {
+      if (e.changedTouches.length === 1 && lbStartX) {
+        const diff = lbStartX - e.changedTouches[0].screenX;
+        if (Math.abs(diff) > 45) {
+          changeLightboxSlide(diff > 0 ? 1 : -1);
+        }
+        lbStartX = 0;
+      }
+    }, { passive: true });
+  }
 }
 
 // ==================== 2. ĐỒNG HỒ ĐẾM NGƯỢC 30/11/2026 ====================
@@ -103,43 +168,171 @@ function initCountdown() {
   setInterval(updateClock, 15000);
 }
 
-// ==================== 3. TRÌNH XEM FILE TRỰC TIẾP TRÊN GIAO DIỆN ====================
+// ==================== 3. TRÌNH XEM FILE TRỰC TIẾP TRÊN GIAO DIỆN (TỐI ƯU DI ĐỘNG) ====================
 const DOC_FILES = {
   cv1751: '/docs/CV-1751-IIG-The-le-AI-or-Behind-2026-2027.pdf',
   cv8344: '/docs/CV-8344-SGDDT-An-Giang-AI-or-Behind.pdf',
   bm01: '/api/download-bm01'
 };
 
+let currentDocTab = 'cv1751';
+let currentDocMode = window.innerWidth < 768 ? 'reader' : 'pdf';
+
+const MOBILE_DOC_SUMMARIES = {
+  cv1751: `
+    <div class="m-reader-card">
+      <div class="m-reader-badge">CÔNG VĂN SỐ 1751/2026/CV-IIG • THỂ LỆ CHÍNH THỨC</div>
+      <h3>CUỘC THI "AI OR BEHIND" NĂM HỌC 2026 – 2027</h3>
+      <p class="m-reader-lead">
+        Do <strong>Tập đoàn Công nghiệp – Viễn thông Quân đội (Viettel)</strong> và <strong>Tổ chức Giáo dục IIG Việt Nam</strong> phối hợp tổ chức hoàn toàn <strong>miễn phí 100%</strong> cho học sinh THPT toàn quốc.
+      </p>
+
+      <div class="m-reader-section">
+        <h4>🎯 1. Đối tượng &amp; Quyền lợi khi tham gia</h4>
+        <ul>
+          <li><strong>Đối tượng:</strong> Học sinh lớp 10, 11, 12 năm học 2026–2027 tại Trường THPT Nguyễn Sinh Sắc (tối đa 500 suất thi Vòng cấp cơ sở/trường).</li>
+          <li><strong>Miễn phí 100%:</strong> Toàn bộ thí sinh đăng ký hợp lệ được cấp miễn phí tài khoản ôn luyện và bài thi <strong>Gmetrix Generative AI Foundations</strong>.</li>
+          <li><strong>Chứng nhận &amp; Chứng chỉ Quốc tế:</strong>
+            <br/>• Đạt <strong>≥ 700/1000 điểm</strong> tại Vòng Cấp cơ sở: Nhận <strong>Giấy chứng nhận điện tử</strong> của Ban Tổ chức.
+            <br/>• Đạt <strong>≥ 700/1000 điểm</strong> tại Vòng Quốc gia: Được cấp miễn phí <strong>Chứng chỉ Quốc tế Generative AI Foundations</strong> của Tập đoàn Giáo dục <strong>Pearson (Hoa Kỳ)</strong> có giá trị toàn cầu.
+          </li>
+        </ul>
+      </div>
+
+      <div class="m-reader-section">
+        <h4>🗓️ 2. Lộ trình 3 Vòng thi chi tiết</h4>
+        <ul>
+          <li><strong>Vòng 1 – Cấp cơ sở (02/11/2026 – 30/12/2026):</strong>
+            <br/>• Hạn đăng ký danh sách: Trước ngày <strong>30/11/2026</strong>.
+            <br/>• Hình thức: Thi trực tuyến trên máy tính tại trường bài thi <em>Gmetrix Generative AI Foundations</em> (50 phút, 35–40 câu hỏi, thang điểm 1000).
+            <br/>• Ngôn ngữ: Học sinh tự chọn <strong>Tiếng Việt</strong> hoặc <strong>Tiếng Anh</strong>.
+          </li>
+          <li><strong>Vòng 2 – Cấp Quốc gia (Ngày 14/03/2027):</strong>
+            <br/>• Dành cho <strong>Top 500 đội tuyển</strong> xuất sắc nhất toàn quốc (mỗi đội 3–5 học sinh cùng trường).
+            <br/>• Thi trực tuyến có giám sát bài thi chính thức <em>Generative AI Foundations</em> của Pearson.
+          </li>
+          <li><strong>Vòng 3 – Chung kết Quốc gia (Ngày 11/04/2027):</strong>
+            <br/>• Dành cho <strong>Top 30 đội tuyển</strong> xuất sắc nhất cả nước thi tập trung tại Hà Nội, Đà Nẵng, TP. Hồ Chí Minh.
+            <br/>• Gồm 2 phần: Bài thi quốc tế <em>AI - IT Specialist</em> và Thuyết trình bảo vệ <em>Dự án ứng dụng AI</em> bằng Tiếng Anh.
+          </li>
+        </ul>
+      </div>
+
+      <div class="m-reader-section">
+        <h4>🏆 3. Cơ cấu Giải thưởng (Tổng giá trị hơn 1 Tỷ đồng)</h4>
+        <ul>
+          <li>🥇 <strong>01 Giải Nhất Quốc gia:</strong> <strong>100.000.000 VNĐ</strong> + Huy chương Vàng + Bằng khen.</li>
+          <li>🥈 <strong>03 Giải Nhì Quốc gia:</strong> <strong>50.000.000 VNĐ / giải</strong> + Huy chương Bạc.</li>
+          <li>🥉 <strong>06 Giải Ba Quốc gia:</strong> <strong>30.000.000 VNĐ / giải</strong> + Huy chương Đồng.</li>
+          <li>🎖️ <strong>20 Giải Khuyến khích:</strong> <strong>10.000.000 VNĐ / giải</strong> + Giấy chứng nhận.</li>
+          <li>🏫 Ngoài ra còn có Giải Tập thể dành cho các Sở GD&amp;ĐT và Trường THPT có phong trào xuất sắc.</li>
+        </ul>
+      </div>
+
+      <div class="m-reader-footer-cta">
+        <a href="/docs/CV-1751-IIG-The-le-AI-or-Behind-2026-2027.pdf" target="_blank" rel="noopener" class="btn btn-primary" style="width:100%;">
+          📥 Mở / Tải Toàn văn PDF Công văn 1751 &amp; Thể lệ (9 Trang)
+        </a>
+      </div>
+    </div>
+  `,
+  cv8344: `
+    <div class="m-reader-card">
+      <div class="m-reader-badge">CÔNG VĂN SỐ 8344/SGDĐT-QLCL&amp;CNTT • SỞ GD&amp;ĐT AN GIANG</div>
+      <h3>V/V THAM GIA CUỘC THI "AI OR BEHIND" NĂM HỌC 2026 – 2027</h3>
+      <p class="m-reader-lead">
+        Văn bản chỉ đạo của <strong>Sở Giáo dục và Đào tạo tỉnh An Giang</strong> gửi các trường THPT và trường phổ thông có nhiều cấp học (trong đó có cấp THPT) trên địa bàn tỉnh.
+      </p>
+
+      <div class="m-reader-section">
+        <h4>📌 1. Nội dung triển khai tại Trường THPT Nguyễn Sinh Sắc</h4>
+        <ul>
+          <li>Tuyên truyền, phổ biến rộng rãi nội dung và Thể lệ Cuộc thi <strong>"AI or Behind" năm học 2026–2027</strong> đến toàn thể giáo viên, phụ huynh và học sinh khối 10, 11, 12.</li>
+          <li>Khuyến khích học sinh đăng ký tham gia trên tinh thần tự nguyện, hoàn toàn <strong>miễn phí</strong>, nhằm nâng cao năng lực ứng dụng Trí tuệ nhân tạo (Gen AI) theo chuẩn quốc tế.</li>
+          <li>Nhà trường cử cán bộ/giáo viên làm đầu mối tiếp nhận tài khoản Gmetrix và hướng dẫn học sinh ôn luyện, dự thi Vòng cấp cơ sở tại phòng máy của trường.</li>
+        </ul>
+      </div>
+
+      <div class="m-reader-section">
+        <h4>⏰ 2. Mốc thời gian quan trọng cần lưu ý</h4>
+        <ul>
+          <li><strong>Hạn chót đăng ký danh sách cấp trường (Biểu mẫu BM01):</strong> Hoàn thành trước ngày <strong>30/11/2026</strong>.</li>
+          <li><strong>Tổ chức thi Vòng cấp cơ sở tại trường:</strong> Từ ngày <strong>02/11/2026 đến hết ngày 30/12/2026</strong>.</li>
+          <li><strong>Số lượng định mức:</strong> Tối đa <strong>500 học sinh / trường THPT</strong>.</li>
+        </ul>
+      </div>
+
+      <div class="m-reader-footer-cta">
+        <a href="/docs/CV-8344-SGDDT-An-Giang-AI-or-Behind.pdf" target="_blank" rel="noopener" class="btn btn-primary" style="width:100%;">
+          📥 Mở / Tải Toàn văn PDF Công văn 8344 của Sở GD&amp;ĐT An Giang
+        </a>
+      </div>
+    </div>
+  `
+};
+
 function openFileViewer(tabKey = 'cv1751') {
   const modal = document.getElementById('docViewerModal');
   if (!modal) return;
+  currentDocMode = window.innerWidth < 768 ? 'reader' : 'pdf';
   modal.classList.add('open');
   switchFileViewerTab(tabKey);
 }
 
+function setDocViewerMode(mode) {
+  currentDocMode = mode;
+  updateDocViewerContent();
+}
+
 function switchFileViewerTab(tabKey) {
+  currentDocTab = tabKey;
   ['cv1751', 'cv8344', 'bm01'].forEach((k) => {
     const btn = document.getElementById(`dvTab_${k}`);
     if (btn) btn.classList.toggle('active', k === tabKey);
   });
 
-  const pdfBox = document.getElementById('dvPdfBox');
-  const bm01Box = document.getElementById('dvBm01Box');
-  const pdfFrame = document.getElementById('dvPdfFrame');
   const dlLink = document.getElementById('dvDownloadLink');
-
   if (dlLink) {
     dlLink.href = DOC_FILES[tabKey] || DOC_FILES.cv1751;
   }
 
-  if (tabKey === 'bm01') {
+  updateDocViewerContent();
+}
+
+function updateDocViewerContent() {
+  const modeBar = document.getElementById('dvModeSwitchBar');
+  const readerBox = document.getElementById('dvMobileReaderBox');
+  const pdfBox = document.getElementById('dvPdfBox');
+  const bm01Box = document.getElementById('dvBm01Box');
+  const pdfFrame = document.getElementById('dvPdfFrame');
+  const btnReader = document.getElementById('btnModeMobileReader');
+  const btnPdf = document.getElementById('btnModePdfEmbed');
+
+  if (btnReader) btnReader.classList.toggle('active', currentDocMode === 'reader');
+  if (btnPdf) btnPdf.classList.toggle('active', currentDocMode === 'pdf');
+
+  if (currentDocTab === 'bm01') {
+    if (modeBar) modeBar.style.display = 'none';
+    if (readerBox) readerBox.style.display = 'none';
     if (pdfBox) pdfBox.style.display = 'none';
     if (bm01Box) bm01Box.style.display = 'block';
     renderBm01Preview();
+    return;
+  }
+
+  if (modeBar) modeBar.style.display = 'flex';
+  if (bm01Box) bm01Box.style.display = 'none';
+
+  if (currentDocMode === 'reader') {
+    if (pdfBox) pdfBox.style.display = 'none';
+    if (readerBox) {
+      readerBox.style.display = 'block';
+      readerBox.innerHTML = MOBILE_DOC_SUMMARIES[currentDocTab] || MOBILE_DOC_SUMMARIES.cv1751;
+    }
   } else {
-    if (bm01Box) bm01Box.style.display = 'none';
+    if (readerBox) readerBox.style.display = 'none';
     if (pdfBox) pdfBox.style.display = 'block';
-    const targetUrl = DOC_FILES[tabKey];
+    const targetUrl = DOC_FILES[currentDocTab];
     if (pdfFrame && pdfFrame.getAttribute('data-src') !== targetUrl) {
       pdfFrame.src = targetUrl;
       pdfFrame.setAttribute('data-src', targetUrl);
@@ -243,7 +436,7 @@ function renderStudentList() {
         <div style="font-size:0.96rem; font-weight:800; color:var(--nss-blue-dark);">
           ${escapeHtml(st.fullName)}
         </div>
-        <div style="font-size:0.78rem; color:#475569; display:flex; justify-content:space-between;">
+        <div style="font-size:0.78rem; color:#475569; display:flex; justify-content:space-between; flex-wrap:wrap; gap:4px;">
           <span>Đề thi: <strong>${escapeHtml(st.examLang)}</strong></span>
           <span>🕒 ${escapeHtml(st.createdAt || '')}</span>
         </div>
@@ -253,7 +446,58 @@ function renderStudentList() {
     .join('');
 }
 
-// ==================== 5. FORM ĐĂNG KÝ HỌC SINH ====================
+// ==================== 5. FORM ĐĂNG KÝ HỌC SINH & CHUẨN HÓA NGÀY SINH dd/MM/YYYY ====================
+function autoFormatDobInput(input) {
+  if (!input) return;
+  let digits = input.value.replace(/\D/g, '').slice(0, 8);
+  let formatted = '';
+  if (digits.length > 0) {
+    formatted = digits.slice(0, 2);
+  }
+  if (digits.length >= 3) {
+    formatted += '/' + digits.slice(2, 4);
+  }
+  if (digits.length >= 5) {
+    formatted += '/' + digits.slice(4, 8);
+  }
+  input.value = formatted;
+}
+
+function syncPickerToDobText(picker, targetInputId) {
+  if (!picker || !picker.value) return;
+  const parts = picker.value.split('-'); // YYYY-MM-DD
+  if (parts.length === 3) {
+    const target = document.getElementById(targetInputId);
+    if (target) {
+      target.value = `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+  }
+}
+
+function normalizeDobDdMmYyyy(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, m, d] = s.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) {
+    return `${m[1].padStart(2, '0')}/${m[2].padStart(2, '0')}/${m[3]}`;
+  }
+  return s;
+}
+
+function isValidDobDdMmYyyy(dobStr) {
+  const m = String(dobStr || '').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!m) return false;
+  const day = Number(m[1]);
+  const month = Number(m[2]);
+  const year = Number(m[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31 || year < 1950 || year > 2025) return false;
+  return true;
+}
+
 function fillClassPrefix(cls) {
   const input = document.getElementById('stClass');
   if (input) {
@@ -269,9 +513,16 @@ document.addEventListener('DOMContentLoaded', () => {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('submitRegBtn');
+    const normalizedDob = normalizeDobDdMmYyyy(document.getElementById('stDob').value);
+    if (!isValidDobDdMmYyyy(normalizedDob)) {
+      showToast('⚠️ Vui lòng nhập Ngày sinh đúng định dạng dd/MM/YYYY (VD: 15/08/2009)!');
+      document.getElementById('stDob')?.focus();
+      return;
+    }
+
     const payload = {
       fullName: document.getElementById('stFullName').value,
-      dob: document.getElementById('stDob').value,
+      dob: normalizedDob,
       className: document.getElementById('stClass').value,
       gender: document.getElementById('stGender').value,
       cccd: document.getElementById('stCccd').value,

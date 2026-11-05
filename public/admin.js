@@ -160,6 +160,39 @@ function switchAdminTab(tab) {
   });
 }
 
+function autoFormatDobInput(input) {
+  if (!input) return;
+  let digits = input.value.replace(/\D/g, '').slice(0, 8);
+  let formatted = '';
+  if (digits.length > 0) formatted = digits.slice(0, 2);
+  if (digits.length >= 3) formatted += '/' + digits.slice(2, 4);
+  if (digits.length >= 5) formatted += '/' + digits.slice(4, 8);
+  input.value = formatted;
+}
+
+function syncPickerToDobText(picker, targetInputId) {
+  if (!picker || !picker.value) return;
+  const parts = picker.value.split('-');
+  if (parts.length === 3) {
+    const target = document.getElementById(targetInputId);
+    if (target) target.value = `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+}
+
+function normalizeDobDdMmYyyy(raw) {
+  const s = String(raw || '').trim();
+  if (!s) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [y, m, d] = s.split('-');
+    return `${d}/${m}/${y}`;
+  }
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (m) {
+    return `${m[1].padStart(2, '0')}/${m[2].padStart(2, '0')}/${m[3]}`;
+  }
+  return s;
+}
+
 // ==================== TAB 1: QUẢN LÝ DANH SÁCH THÍ SINH ====================
 function renderAdminStudentTable() {
   const tbody = document.getElementById('admStudentTableBody');
@@ -200,7 +233,7 @@ function renderAdminStudentTable() {
         <td style="font-weight:700;">${i + 1}</td>
         <td><span class="student-code-badge">${escapeHtml(s.id)}</span></td>
         <td><strong>${escapeHtml(s.fullName)}</strong></td>
-        <td>${escapeHtml(s.dob)}</td>
+        <td>${escapeHtml(normalizeDobDdMmYyyy(s.dob))}</td>
         <td>${escapeHtml(s.gender)}</td>
         <td><span class="student-class-badge">${escapeHtml(s.className)}</span></td>
         <td>${escapeHtml(s.cccd)}</td>
@@ -235,7 +268,7 @@ function openStudentModal(studentId = '') {
     title.textContent = `✏️ Chỉnh sửa Thí sinh (${st.id})`;
     document.getElementById('editStudentId').value = st.id;
     document.getElementById('admStName').value = st.fullName || '';
-    document.getElementById('admStDob').value = st.dob || '';
+    document.getElementById('admStDob').value = normalizeDobDdMmYyyy(st.dob);
     document.getElementById('admStClass').value = st.className || '';
     document.getElementById('admStGender').value = st.gender || 'Nam';
     document.getElementById('admStCccd').value = st.cccd || '';
@@ -266,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const editId = document.getElementById('editStudentId').value;
     const payload = {
       fullName: document.getElementById('admStName').value,
-      dob: document.getElementById('admStDob').value,
+      dob: normalizeDobDdMmYyyy(document.getElementById('admStDob').value),
       className: document.getElementById('admStClass').value,
       gender: document.getElementById('admStGender').value,
       cccd: document.getElementById('admStCccd').value,
@@ -504,7 +537,7 @@ function printStudentList() {
             <td style="text-align:center;">${idx + 1}</td>
             <td style="text-align:center; font-weight:bold;">${escapeHtml(s.id)}</td>
             <td><strong>${escapeHtml(s.fullName)}</strong></td>
-            <td style="text-align:center;">${escapeHtml(s.dob)}</td>
+            <td style="text-align:center;">${escapeHtml(normalizeDobDdMmYyyy(s.dob))}</td>
             <td style="text-align:center;">${escapeHtml(s.gender)}</td>
             <td style="text-align:center; font-weight:bold;">${escapeHtml(s.className)}</td>
             <td style="text-align:center;">${escapeHtml(s.cccd)}</td>

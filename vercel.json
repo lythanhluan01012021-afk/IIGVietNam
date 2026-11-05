@@ -1,0 +1,29 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "public/**",
+          "data/**",
+          "1.png",
+          "2.png",
+          "3.png",
+          "4.png",
+          "5.png",
+          "*.xlsx",
+          "*.pdf",
+          "google-drive-sync-script.gs"
+        ]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/server.js"
+    }
+  ]
+}
