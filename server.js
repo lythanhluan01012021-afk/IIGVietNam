@@ -77,6 +77,17 @@ const defaultState = {
   students: []
 };
 
+// Thời gian thực theo múi giờ Việt Nam (UTC+7), định dạng dd/MM/yyyy HH:mm:ss — đúng cả khi chạy trên Vercel (máy chủ UTC)
+function nowVN() {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false
+  }).formatToParts(new Date()).reduce((a, p) => { a[p.type] = p.value; return a; }, {});
+  const hh = parts.hour === '24' ? '00' : parts.hour;
+  return `${parts.day}/${parts.month}/${parts.year} ${hh}:${parts.minute}:${parts.second}`;
+}
 let appState = loadInitialState();
 
 function loadInitialState() {
@@ -235,7 +246,7 @@ async function readFromLocalExcel() {
           parentName: extractPlainText(ws2.getCell(r, 11).value),
           parentPhone: extractPlainText(ws2.getCell(r, 12).value),
           consent: true,
-          createdAt: extractPlainText(ws2.getCell(r, 14).value) || new Date().toLocaleString('vi-VN')
+          createdAt: extractPlainText(ws2.getCell(r, 14).value) || nowVN()
         });
       }
       if (parsedStudents.length > 0 || appState.students.length === 0) {
@@ -1039,7 +1050,7 @@ app.post('/api/students/register', async (req, res) => {
       parentName: String(parentName).trim(),
       parentPhone: String(parentPhone).trim(),
       consent: true,
-      createdAt: new Date().toLocaleString('vi-VN')
+      createdAt: nowVN()
     };
 
     appState.students.push(newStudent);

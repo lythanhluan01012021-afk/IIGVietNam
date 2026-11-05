@@ -1,4 +1,4 @@
-let adminState = {
+﻿let adminState = {
   meta: {},
   bm01Rows: [],
   students: []
@@ -129,7 +129,7 @@ function applyAdminState(state) {
   const meta = state.meta || {};
   if (meta.lastLocalSync) {
     document.getElementById('kpiLastSyncTime').textContent =
-      'Cập nhật: ' + new Date(meta.lastLocalSync).toLocaleString('vi-VN');
+      'Cập nhật: ' + new Date(meta.lastLocalSync).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
   }
 
   // 2. Cập nhật các ô Meta của BM01
