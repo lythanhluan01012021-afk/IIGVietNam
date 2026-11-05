@@ -1,16 +1,23 @@
 /**
- * GOOGLE APPS SCRIPT - CẦU NỐI ĐỒNG BỘ 2 CHIỀU (LOCAL EXCEL <-> WEB <-> GOOGLE DRIVE)
+ * GOOGLE APPS SCRIPT - CẦU NỐI ĐỒNG BỘ CSDL THỜI GIAN THỰC (WEB <-> GOOGLE DRIVE)
  * Thư mục Google Drive đích: 1a_hJhS5wetmMRktY6qfSVCqNN3pQUuCb
- * Trường THPT Nguyễn Sinh Sắc - Cuộc thi AI OR BEHIND năm học 2026 - 2027
+ * Đơn vị: Trường THPT Nguyễn Sinh Sắc (Tân Châu - An Giang)
+ * Cuộc thi: AI OR BEHIND năm học 2026 - 2027
  *
- * HƯỚNG DẪN CÀI ĐẶT NHANH (Chỉ 1 phút):
- * 1. Truy cập https://script.google.com -> Bấm "Dự án mới" (New Project).
- * 2. Xóa mã mặc định và dán toàn bộ nội dung file này vào.
- * 3. Bấm "Triển khai" (Deploy) -> "Tùy chọn triển khai mới" (New deployment).
- * 4. Chọn loại: "Ứng dụng web" (Web app):
- *    - Thực thi dưới dạng (Execute as): "Tôi" (Me)
- *    - Ai có quyền truy cập (Who has access): "Bất kỳ ai" (Anyone)
- * 5. Bấm "Triển khai", cấp quyền và sao chép URL Web App dán vào phần Cấu hình Google Drive trên Website.
+ * =========================================================================
+ * BƯỚC QUAN TRỌNG NHẤT ĐỂ KÍCH HOẠT QUYỀN TRUY CẬP (Chỉ làm 1 lần duy nhất):
+ * 1. Dán toàn bộ mã này vào https://script.google.com
+ * 2. Trên thanh công cụ phía trên, tại ô chọn hàm, chọn hàm:
+ *    👉 [ KHOI_DONG_VA_CAP_QUYEN_GOOGLE ]
+ * 3. Bấm nút ▶️ [ Chạy ] (Run).
+ * 4. Google sẽ hiện bảng "Cần có quyền truy cập":
+ *    -> Bấm "Xem xét quyền" (Review permissions)
+ *    -> Chọn tài khoản Google của Thầy
+ *    -> Bấm chữ "Nâng cao" (Advanced) ở góc dưới
+ *    -> Bấm "Đi tới IIGVN (không an toàn)"
+ *    -> Bấm "Cho phép" (Allow).
+ * 5. Sau đó bấm "Triển khai" (Deploy) -> "Quản lý bản triển khai" -> Sửa (✏️) -> Phiên bản mới -> Triển khai.
+ * =========================================================================
  */
 
 const FOLDER_ID = '1a_hJhS5wetmMRktY6qfSVCqNN3pQUuCb';
@@ -18,7 +25,52 @@ const XLSX_FILENAME = 'BM01-danh-sach-TS-vong-thi-cap-co-so.xlsx';
 const STUDENTS_XLSX_FILENAME = 'CSDL-Thi-Sinh-Dang-Ky-THPT-Nguyen-Sinh-Sac.xlsx';
 const GSHEET_NAME = 'CSDL_Hoc_Sinh_Dang_Ky_THPT_Nguyen_Sinh_Sac';
 const JSON_STATE_FILENAME = 'BM01-sync-state.json';
-const SCRIPT_VERSION = 'v3-csdl-sheet';
+const SCRIPT_VERSION = 'v4-active-sync';
+
+/**
+ * HÀM KHỞI ĐỘNG & CẤP QUYỀN ĐẦY ĐỦ CHO GOOGLE SHEETS + GOOGLE DRIVE
+ * (Thầy bấm nút "Chạy" hàm này để mở khóa toàn bộ quyền)
+ */
+function KHOI_DONG_VA_CAP_QUYEN_GOOGLE() {
+  const folder = DriveApp.getFolderById(FOLDER_ID);
+  Logger.log('1. Đã kết nối thư mục Google Drive: ' + folder.getName());
+
+  // Kiểm tra hoặc tạo Google Sheet trực tuyến
+  let ss = null;
+  const sheetFiles = folder.getFilesByName(GSHEET_NAME);
+  if (sheetFiles.hasNext()) {
+    ss = SpreadsheetApp.openById(sheetFiles.next().getId());
+    Logger.log('2. Đã tìm thấy Google Sheet CSDL: ' + ss.getUrl());
+  } else {
+    ss = SpreadsheetApp.create(GSHEET_NAME);
+    const ssFile = DriveApp.getFileById(ss.getId());
+    folder.addFile(ssFile);
+    DriveApp.getRootFolder().removeFile(ssFile);
+    Logger.log('2. Đã tạo mới Google Sheet CSDL: ' + ss.getUrl());
+  }
+
+  const sheet = ss.getSheets()[0];
+  sheet.setName('DS Thí Sinh Đăng Ký');
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow([
+      'STT',
+      'Mã ĐK',
+      'Họ và tên học sinh',
+      'Ngày sinh',
+      'Giới tính',
+      'Lớp',
+      'Số CCCD / Định danh',
+      'SĐT Học sinh',
+      'Email nhận code Gmetrix',
+      'Ngôn ngữ bài thi',
+      'Họ tên Phụ huynh',
+      'SĐT Phụ huynh',
+      'Thời gian đăng ký'
+    ]);
+  }
+
+  Logger.log('🎉 CẤP QUYỀN THÀNH CÔNG 100%! Giờ Thầy chỉ cần Triển khai phiên bản mới.');
+}
 
 function doGet(e) {
   try {
@@ -29,6 +81,11 @@ function doGet(e) {
       const files = folder.getFilesByName(XLSX_FILENAME);
       const hasFile = files.hasNext();
       const fileInfo = hasFile ? files.next() : null;
+
+      const sheetFiles = folder.getFilesByName(GSHEET_NAME);
+      const hasSheet = sheetFiles.hasNext();
+      const sheetUrl = hasSheet ? sheetFiles.next().getUrl() : null;
+
       return jsonResponse({
         ok: true,
         version: SCRIPT_VERSION,
@@ -36,6 +93,8 @@ function doGet(e) {
         folderName: folder.getName(),
         xlsxExists: hasFile,
         xlsxUrl: fileInfo ? fileInfo.getUrl() : null,
+        sheetExists: hasSheet,
+        sheetUrl: sheetUrl,
         lastUpdated: fileInfo ? fileInfo.getLastUpdated().toISOString() : null
       });
     }
@@ -82,86 +141,97 @@ function doPost(e) {
 
     let xlsxUrl = null;
     let updatedTime = new Date().toISOString();
+    let patchError = null;
+    let sheetError = null;
 
     // 1. Lưu/Cập nhật file BM01-danh-sach-TS-vong-thi-cap-co-so.xlsx trên Google Drive
     if (payload.xlsxBase64) {
-      const bytes = Utilities.base64Decode(payload.xlsxBase64);
-      const blob = Utilities.newBlob(
-        bytes,
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        XLSX_FILENAME
-      );
-      const existing = folder.getFilesByName(XLSX_FILENAME);
-      const file = upsertBinaryFile(folder, XLSX_FILENAME, blob);
-      xlsxUrl = file.getUrl();
-      updatedTime = file.getLastUpdated().toISOString();
+      try {
+        const bytes = Utilities.base64Decode(payload.xlsxBase64);
+        const blob = Utilities.newBlob(
+          bytes,
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          XLSX_FILENAME
+        );
+        const file = upsertBinaryFile(folder, XLSX_FILENAME, blob);
+        xlsxUrl = file.getUrl();
+        updatedTime = file.getLastUpdated().toISOString();
+      } catch (errXlsx) {
+        patchError = 'XLSX error: ' + errXlsx.toString();
+      }
     }
 
     // 2. Lưu/Cập nhật file CSDL-Thi-Sinh-Dang-Ky-THPT-Nguyen-Sinh-Sac.xlsx trên Google Drive
     if (payload.studentsXlsxBase64) {
-      const stBytes = Utilities.base64Decode(payload.studentsXlsxBase64);
-      const stBlob = Utilities.newBlob(
-        stBytes,
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        STUDENTS_XLSX_FILENAME
-      );
-      upsertBinaryFile(folder, STUDENTS_XLSX_FILENAME, stBlob);
+      try {
+        const stBytes = Utilities.base64Decode(payload.studentsXlsxBase64);
+        const stBlob = Utilities.newBlob(
+          stBytes,
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          STUDENTS_XLSX_FILENAME
+        );
+        upsertBinaryFile(folder, STUDENTS_XLSX_FILENAME, stBlob);
+      } catch (errSt) {
+        patchError = (patchError ? patchError + ' | ' : '') + 'Students XLSX error: ' + errSt.toString();
+      }
     }
 
     // 3. Tạo / Cập nhật trực tiếp Google Sheet "CSDL_Hoc_Sinh_Dang_Ky_THPT_Nguyen_Sinh_Sac" trong thư mục Drive
-    let sheetError = null;
     try {
-    if (payload.data && Array.isArray(payload.data.students)) {
-      let ss = null;
-      const sheetFiles = folder.getFilesByName(GSHEET_NAME);
-      if (sheetFiles.hasNext()) {
-        ss = SpreadsheetApp.openById(sheetFiles.next().getId());
-      } else {
-        ss = SpreadsheetApp.create(GSHEET_NAME);
-        const ssFile = DriveApp.getFileById(ss.getId());
-        folder.addFile(ssFile);
-        DriveApp.getRootFolder().removeFile(ssFile);
+      if (payload.data && Array.isArray(payload.data.students)) {
+        let ss = null;
+        const sheetFiles = folder.getFilesByName(GSHEET_NAME);
+        if (sheetFiles.hasNext()) {
+          ss = SpreadsheetApp.openById(sheetFiles.next().getId());
+        } else {
+          ss = SpreadsheetApp.create(GSHEET_NAME);
+          const ssFile = DriveApp.getFileById(ss.getId());
+          folder.addFile(ssFile);
+          DriveApp.getRootFolder().removeFile(ssFile);
+        }
+
+        const sheet = ss.getSheets()[0];
+        sheet.setName('DS Thí Sinh Đăng Ký');
+        sheet.clearContents();
+
+        const headers = [
+          'STT',
+          'Mã ĐK',
+          'Họ và tên học sinh',
+          'Ngày sinh',
+          'Giới tính',
+          'Lớp',
+          'Số CCCD / Định danh',
+          'SĐT Học sinh',
+          'Email nhận code Gmetrix',
+          'Ngôn ngữ bài thi',
+          'Họ tên Phụ huynh',
+          'SĐT Phụ huynh',
+          'Thời gian đăng ký'
+        ];
+        const rows = [headers];
+        payload.data.students.forEach(function (st, idx) {
+          rows.push([
+            idx + 1,
+            st.id || '',
+            st.fullName || '',
+            st.dob || '',
+            st.gender || '',
+            st.className || '',
+            st.cccd || '',
+            st.phone || '',
+            st.email || '',
+            st.examLang || 'Tiếng Việt',
+            st.parentName || '',
+            st.parentPhone || '',
+            st.createdAt || ''
+          ]);
+        });
+        sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
+
+        // Định dạng tiêu đề cột cho đẹp mắt
+        sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#dbeafe');
       }
-
-      const sheet = ss.getSheets()[0];
-      sheet.setName('DS Học Sinh Đăng Ký');
-      sheet.clearContents();
-
-      const headers = [
-        'STT',
-        'Mã ĐK',
-        'Họ và tên học sinh',
-        'Ngày sinh',
-        'Giới tính',
-        'Lớp',
-        'Số CCCD / Định danh',
-        'SĐT Học sinh',
-        'Email nhận code Gmetrix',
-        'Ngôn ngữ bài thi',
-        'Họ tên Phụ huynh',
-        'SĐT Phụ huynh',
-        'Thời gian đăng ký'
-      ];
-      const rows = [headers];
-      payload.data.students.forEach(function (st, idx) {
-        rows.push([
-          idx + 1,
-          st.id || '',
-          st.fullName || '',
-          st.dob || '',
-          st.gender || '',
-          st.className || '',
-          st.cccd || '',
-          st.phone || '',
-          st.email || '',
-          st.examLang || 'Tiếng Việt',
-          st.parentName || '',
-          st.parentPhone || '',
-          st.createdAt || ''
-        ]);
-      });
-      sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
-    }
     } catch (sheetErr) {
       sheetError = sheetErr.toString();
     }
@@ -182,6 +252,7 @@ function doPost(e) {
       ok: true,
       version: SCRIPT_VERSION,
       sheetError: sheetError,
+      patchError: patchError,
       message: 'Đã đồng bộ CSDL BM01 lên Google Drive thành công!',
       folderId: FOLDER_ID,
       xlsxUrl: xlsxUrl,
@@ -198,8 +269,9 @@ function jsonResponse(obj) {
 }
 
 /**
- * Cập nhật file nhị phân (.xlsx) trực tiếp tại chỗ (in-place) giữ nguyên 100% File ID,
- * TUYỆT ĐỐI KHÔNG GỌI setTrashed (không bao giờ đưa file vào thùng rác, tránh báo lỗi khi đang mở xem).
+ * Cập nhật file nhị phân (.xlsx) trực tiếp tại chỗ (in-place)
+ * Ưu tiên PATCH qua REST API để không đổi File ID và không bao giờ đưa file vào thùng rác.
+ * Nếu chưa cấp quyền PATCH, an toàn tạo file mới và dọn dẹp file cũ.
  */
 function upsertBinaryFile(folder, filename, blob) {
   const files = folder.getFilesByName(filename);
@@ -223,9 +295,14 @@ function upsertBinaryFile(folder, filename, blob) {
     } catch (e) {
       Logger.log('Lỗi patch in-place: ' + e.toString());
     }
-    return file;
+
+    // Fallback nếu chưa cấp quyền UrlFetchApp: tạo file mới để đảm bảo dữ liệu LUÔN ĐƯỢC LƯU
+    const newFile = folder.createFile(blob);
+    try {
+      file.setTrashed(true);
+    } catch (_) {}
+    return newFile;
   } else {
     return folder.createFile(blob);
   }
 }
-
