@@ -1988,6 +1988,16 @@ section[id] {
 }
 
 /* Ô nhập Ngày sinh chuẩn định dạng dd/MM/YYYY kèm nút chọn Lịch */
+.dob-select-row {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1.2fr;
+  gap: 8px;
+}
+
+.dob-select-row .form-control {
+  padding: 8px 6px;
+}
+
 .dob-input-wrap {
   position: relative;
   display: flex;

@@ -498,6 +498,32 @@ function isValidDobDdMmYyyy(dobStr) {
   return true;
 }
 
+function initDobSelects() {
+  const day = document.getElementById('stDobDay');
+  const month = document.getElementById('stDobMonth');
+  const year = document.getElementById('stDobYear');
+  const hidden = document.getElementById('stDob');
+  if (!day || !month || !year || !hidden) return;
+
+  for (let d = 1; d <= 31; d++) {
+    day.insertAdjacentHTML('beforeend', `<option value="${String(d).padStart(2, '0')}">${d}</option>`);
+  }
+  for (let m = 1; m <= 12; m++) {
+    month.insertAdjacentHTML('beforeend', `<option value="${String(m).padStart(2, '0')}">Tháng ${m}</option>`);
+  }
+  for (let y = 2012; y >= 2003; y--) {
+    year.insertAdjacentHTML('beforeend', `<option value="${y}">${y}</option>`);
+  }
+
+  const update = () => {
+    hidden.value = day.value && month.value && year.value ? `${day.value}/${month.value}/${year.value}` : '';
+  };
+  [day, month, year].forEach((el) => el.addEventListener('change', update));
+  document.getElementById('studentRegForm')?.addEventListener('reset', () => setTimeout(update, 0));
+}
+
+window.addEventListener('DOMContentLoaded', initDobSelects);
+
 function fillClassPrefix(cls) {
   const input = document.getElementById('stClass');
   if (input) {
@@ -515,8 +541,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('submitRegBtn');
     const normalizedDob = normalizeDobDdMmYyyy(document.getElementById('stDob').value);
     if (!isValidDobDdMmYyyy(normalizedDob)) {
-      showToast('⚠️ Vui lòng nhập Ngày sinh đúng định dạng dd/MM/YYYY (VD: 15/08/2009)!');
-      document.getElementById('stDob')?.focus();
+      showToast('⚠️ Vui lòng chọn đủ Ngày, Tháng, Năm sinh!');
+      document.getElementById('stDobDay')?.focus();
       return;
     }
 

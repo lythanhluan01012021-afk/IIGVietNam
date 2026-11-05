@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/styles.css?v=20261105-mobile" />
+  <link rel="stylesheet" href="/styles.css?v=20261105-dob" />
 </head>
 <body>
 
@@ -191,42 +191,23 @@
             <input type="text" id="stFullName" class="form-control" placeholder="VD: Nguyễn Minh Khôi" autocomplete="name" required />
           </div>
 
-          <div class="form-row-2col">
-            <div class="form-group">
-              <label for="stDob">2. Ngày sinh (dd/MM/YYYY) <span class="req">(*)</span></label>
-              <div class="dob-input-wrap">
-                <input
-                  type="text"
-                  id="stDob"
-                  class="form-control dob-text-input"
-                  inputmode="numeric"
-                  maxlength="10"
-                  placeholder="dd/MM/YYYY"
-                  oninput="autoFormatDobInput(this)"
-                  required
-                />
-                <label class="dob-picker-btn" title="Chọn từ lịch">
-                  📅
-                  <input
-                    type="date"
-                    id="stDobPicker"
-                    class="dob-hidden-picker"
-                    onchange="syncPickerToDobText(this, 'stDob')"
-                    tabindex="-1"
-                  />
-                </label>
-              </div>
+          <div class="form-group full-mobile">
+            <label>2. Ngày sinh <span class="req">(*)</span></label>
+            <div class="dob-select-row">
+              <select id="stDobDay" class="form-control" aria-label="Ngày"><option value="">Ngày</option></select>
+              <select id="stDobMonth" class="form-control" aria-label="Tháng"><option value="">Tháng</option></select>
+              <select id="stDobYear" class="form-control" aria-label="Năm"><option value="">Năm</option></select>
             </div>
-
-            <div class="form-group">
-              <label for="stGender">3. Giới tính</label>
-              <select id="stGender" class="form-control">
-                <option value="Nam">Nam</option>
-                <option value="Nữ">Nữ</option>
-              </select>
-            </div>
+            <input type="hidden" id="stDob" />
           </div>
 
+          <div class="form-group full-mobile">
+            <label for="stGender">3. Giới tính</label>
+            <select id="stGender" class="form-control">
+              <option value="Nam">Nam</option>
+              <option value="Nữ">Nữ</option>
+            </select>
+          </div>
           <div class="form-row-2col">
             <div class="form-group">
               <label for="stClass">4. Lớp đang học <span class="req">(*)</span></label>
@@ -435,6 +416,6 @@
     </a>
   </nav>
 
-  <script src="/app.js?v=20261105-mobile"></script>
+  <script src="/app.js?v=20261105-dob"></script>
 </body>
 </html>
