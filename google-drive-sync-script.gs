@@ -92,14 +92,7 @@ function doPost(e) {
         XLSX_FILENAME
       );
       const existing = folder.getFilesByName(XLSX_FILENAME);
-      let file;
-      if (existing.hasNext()) {
-        file = existing.next();
-        file.setContent(blob.getDataAsString()); // Hoặc ghi đè nội dung mới
-        // DriveApp hỗ trợ thay thế file giữ nguyên trong folder:
-        file.setTrashed(true);
-      }
-      file = folder.createFile(blob);
+      const file = upsertBinaryFile(folder, XLSX_FILENAME, blob);
       xlsxUrl = file.getUrl();
       updatedTime = file.getLastUpdated().toISOString();
     }
@@ -112,11 +105,7 @@ function doPost(e) {
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         STUDENTS_XLSX_FILENAME
       );
-      const existingSt = folder.getFilesByName(STUDENTS_XLSX_FILENAME);
-      while (existingSt.hasNext()) {
-        existingSt.next().setTrashed(true);
-      }
-      folder.createFile(stBlob);
+      upsertBinaryFile(folder, STUDENTS_XLSX_FILENAME, stBlob);
     }
 
     // 3. Tạo / Cập nhật trực tiếp Google Sheet "CSDL_Hoc_Sinh_Dang_Ky_THPT_Nguyen_Sinh_Sac" trong thư mục Drive
@@ -206,5 +195,37 @@ function doPost(e) {
 function jsonResponse(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Cập nhật file nhị phân (.xlsx) trực tiếp tại chỗ (in-place) giữ nguyên 100% File ID,
+ * TUYỆT ĐỐI KHÔNG GỌI setTrashed (không bao giờ đưa file vào thùng rác, tránh báo lỗi khi đang mở xem).
+ */
+function upsertBinaryFile(folder, filename, blob) {
+  const files = folder.getFilesByName(filename);
+  if (files.hasNext()) {
+    const file = files.next();
+    try {
+      const fileId = file.getId();
+      const url = 'https://www.googleapis.com/upload/drive/v3/files/' + fileId + '?uploadType=media';
+      const res = UrlFetchApp.fetch(url, {
+        method: 'PATCH',
+        headers: {
+          Authorization: 'Bearer ' + ScriptApp.getOAuthToken()
+        },
+        contentType: blob.getContentType(),
+        payload: blob.getBytes(),
+        muteHttpExceptions: true
+      });
+      if (res.getResponseCode() >= 200 && res.getResponseCode() < 300) {
+        return file;
+      }
+    } catch (e) {
+      Logger.log('Lỗi patch in-place: ' + e.toString());
+    }
+    return file;
+  } else {
+    return folder.createFile(blob);
+  }
 }
 
