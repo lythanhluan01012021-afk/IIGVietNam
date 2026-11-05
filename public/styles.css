@@ -1448,6 +1448,12 @@ body {
   gap: 10px;
 }
 
+@media (min-width: 768px) {
+  .doc-quick-buttons {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
 .doc-preview-btn {
   display: flex;
   align-items: center;
