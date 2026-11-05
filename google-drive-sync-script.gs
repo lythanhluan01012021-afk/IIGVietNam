@@ -18,6 +18,7 @@ const XLSX_FILENAME = 'BM01-danh-sach-TS-vong-thi-cap-co-so.xlsx';
 const STUDENTS_XLSX_FILENAME = 'CSDL-Thi-Sinh-Dang-Ky-THPT-Nguyen-Sinh-Sac.xlsx';
 const GSHEET_NAME = 'CSDL_Hoc_Sinh_Dang_Ky_THPT_Nguyen_Sinh_Sac';
 const JSON_STATE_FILENAME = 'BM01-sync-state.json';
+const SCRIPT_VERSION = 'v3-csdl-sheet';
 
 function doGet(e) {
   try {
@@ -30,6 +31,7 @@ function doGet(e) {
       const fileInfo = hasFile ? files.next() : null;
       return jsonResponse({
         ok: true,
+        version: SCRIPT_VERSION,
         folderId: FOLDER_ID,
         folderName: folder.getName(),
         xlsxExists: hasFile,
@@ -118,6 +120,8 @@ function doPost(e) {
     }
 
     // 3. Tạo / Cập nhật trực tiếp Google Sheet "CSDL_Hoc_Sinh_Dang_Ky_THPT_Nguyen_Sinh_Sac" trong thư mục Drive
+    let sheetError = null;
+    try {
     if (payload.data && Array.isArray(payload.data.students)) {
       let ss = null;
       const sheetFiles = folder.getFilesByName(GSHEET_NAME);
@@ -169,6 +173,9 @@ function doPost(e) {
       });
       sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
     }
+    } catch (sheetErr) {
+      sheetError = sheetErr.toString();
+    }
 
     // 4. Lưu file trạng thái JSON để đồng bộ 2 chiều cực nhanh
     if (payload.data) {
@@ -184,6 +191,8 @@ function doPost(e) {
 
     return jsonResponse({
       ok: true,
+      version: SCRIPT_VERSION,
+      sheetError: sheetError,
       message: 'Đã đồng bộ CSDL BM01 lên Google Drive thành công!',
       folderId: FOLDER_ID,
       xlsxUrl: xlsxUrl,
