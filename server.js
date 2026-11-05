@@ -32,6 +32,7 @@ const TEMPLATE_PATH = path.join(__dirname, 'data', 'BM01-template.xlsx');
 const DB_JSON_PATH = path.join(__dirname, 'data', 'db-state.json');
 const DRIVE_FOLDER_ID = '1a_hJhS5wetmMRktY6qfSVCqNN3pQUuCb';
 const DRIVE_FOLDER_URL = `https://drive.google.com/drive/folders/${DRIVE_FOLDER_ID}?usp=sharing`;
+const MOUNTED_DRIVE_DIR = 'G:\\My Drive\\IIGVN';
 const GDRIVE_CMD = 'C:\\Users\\HOANG ANH\\.gemini\\antigravity\\bin\\gdrive.cmd';
 
 let isWritingExcel = false;
@@ -193,8 +194,15 @@ async function readFromLocalExcel() {
       }
     }
 
-    // 2. Đọc Sheet 2: DS Thí Sinh Đăng Ký (nếu đã có trong file Excel)
-    const ws2 = wb.getWorksheet('DS Thí Sinh Đăng Ký');
+    // 2. Đọc file CSDL-Thi-Sinh-Dang-Ky-THPT-Nguyen-Sinh-Sac.xlsx (hoặc Sheet 2 nếu có)
+    let ws2 = wb.getWorksheet('DS Thí Sinh Đăng Ký');
+    if (!ws2 && fs.existsSync(STUDENTS_EXCEL_PATH)) {
+      try {
+        const wbSt = new ExcelJS.Workbook();
+        await wbSt.xlsx.readFile(STUDENTS_EXCEL_PATH);
+        ws2 = wbSt.getWorksheet('DS Thí Sinh Đăng Ký') || wbSt.worksheets[0];
+      } catch (_) {}
+    }
     if (ws2 && ws2.rowCount >= 5) {
       const parsedStudents = [];
       for (let r = 5; r <= ws2.rowCount; r++) {
@@ -217,7 +225,9 @@ async function readFromLocalExcel() {
           createdAt: extractPlainText(ws2.getCell(r, 14).value) || new Date().toLocaleString('vi-VN')
         });
       }
-      appState.students = parsedStudents;
+      if (parsedStudents.length > 0 || appState.students.length === 0) {
+        appState.students = parsedStudents;
+      }
     }
 
     if (appState.meta.autoCountFromStudents && appState.bm01Rows.length > 0 && appState.students.length > 0) {
@@ -618,6 +628,24 @@ async function writeToLocalExcel() {
     });
 
     await writeStudentsDatabaseExcel();
+
+    // Nếu thư mục Google Drive Desktop (G:\My Drive\IIGVN) đang mở trên máy -> Đồng bộ trực tiếp cả 2 file ngay lập tức
+    if (fs.existsSync(MOUNTED_DRIVE_DIR)) {
+      try {
+        fs.copyFileSync(EXCEL_PATH, path.join(MOUNTED_DRIVE_DIR, 'BM01-danh-sach-TS-vong-thi-cap-co-so.xlsx'));
+        fs.copyFileSync(STUDENTS_EXCEL_PATH, path.join(MOUNTED_DRIVE_DIR, 'CSDL-Thi-Sinh-Dang-Ky-THPT-Nguyen-Sinh-Sac.xlsx'));
+        fs.writeFileSync(
+          path.join(MOUNTED_DRIVE_DIR, 'BM01-sync-state.json'),
+          JSON.stringify({ meta: appState.meta, bm01Rows: appState.bm01Rows, students: appState.students }, null, 2),
+          'utf8'
+        );
+        appState.meta.lastDriveSync = new Date().toISOString();
+        appState.meta.driveSyncStatus = 'synced';
+        appState.meta.driveSyncMessage = 'Đã đồng bộ trực tiếp BM01 & CSDL Học sinh đăng ký lên Google Drive (IIGVN)!';
+      } catch (copyErr) {
+        console.error('Lỗi ghi trực tiếp vào G:\\My Drive\\IIGVN:', copyErr.message);
+      }
+    }
 
     lastWriteTimestamp = Date.now();
     appState.meta.lastLocalSync = new Date().toISOString();
