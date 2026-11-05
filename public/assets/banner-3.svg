@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="50%" stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="520" fill="url(#bg3)"/>
+  <!-- Global Certificate Illustration -->
+  <g transform="translate(745, 75)">
+    <rect x="20" y="20" width="370" height="250" rx="16" fill="#ffffff" stroke="#fde047" stroke-width="5"/>
+    <rect x="38" y="38" width="334" height="214" rx="8" fill="none" stroke="#1b3189" stroke-width="2" stroke-dasharray="6 4"/>
+    <text x="205" y="80" text-anchor="middle" fill="#1b3189" font-family="serif" font-weight="900" font-size="21">PEARSON • CERTIPORT</text>
+    <text x="205" y="112" text-anchor="middle" fill="#e11d48" font-family="sans-serif" font-weight="900" font-size="19">GENERATIVE AI FOUNDATIONS</text>
+    <line x1="85" y1="130" x2="325" y2="130" stroke="#cbd5e1" stroke-width="2"/>
+    <text x="205" y="160" text-anchor="middle" fill="#334155" font-family="sans-serif" font-weight="700" font-size="15">CHỨNG CHỈ QUỐC TẾ TOÀN CẦU</text>
+    <text x="205" y="185" text-anchor="middle" fill="#047857" font-family="sans-serif" font-weight="800" font-size="14">Đạt từ 700/1000 điểm • Chọn 40 Đội</text>
+    <circle cx="205" cy="222" r="22" fill="#f59e0b"/>
+    <text x="205" y="228" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="900" font-size="16">★</text>
+  </g>
+  <rect x="755" y="395" width="390" height="46" rx="23" fill="#10b981"/>
+  <text x="950" y="424" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-weight="900" font-size="17">VÒNG LOẠI QUỐC GIA: 14/03/2027</text>
+</svg>

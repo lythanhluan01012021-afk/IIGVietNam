@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg5" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f1f5c"/>
+      <stop offset="50%" stop-color="#881337"/>
+      <stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="520" fill="url(#bg5)"/>
+  <!-- Trophy & Prizes Visual -->
+  <g transform="translate(735, 65)">
+    <rect x="20" y="15" width="380" height="95" rx="16" fill="#fde047" stroke="#ffffff" stroke-width="3"/>
+    <text x="210" y="52" text-anchor="middle" fill="#881337" font-family="sans-serif" font-weight="900" font-size="18">🏆 01 GIẢI NHẤT ĐỒNG ĐỘI</text>
+    <text x="210" y="90" text-anchor="middle" fill="#0f172a" font-family="sans-serif" font-weight="900" font-size="32">100.000.000 VNĐ</text>
+
+    <rect x="20" y="128" width="182" height="82" rx="14" fill="rgba(255,255,255,0.16)" stroke="#fde047" stroke-width="2"/>
+    <text x="111" y="160" text-anchor="middle" fill="#fde047" font-family="sans-serif" font-weight="800" font-size="15">02 GIẢI NHÌ</text>
+    <text x="111" y="190" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="900" font-size="20">40 TRIỆU/GIẢI</text>
+
+    <rect x="218" y="128" width="182" height="82" rx="14" fill="rgba(255,255,255,0.16)" stroke="#38bdf8" stroke-width="2"/>
+    <text x="309" y="160" text-anchor="middle" fill="#bae6fd" font-family="sans-serif" font-weight="800" font-size="15">03 GIẢI BA</text>
+    <text x="309" y="190" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="900" font-size="20">20 TRIỆU/GIẢI</text>
+
+    <rect x="20" y="224" width="380" height="72" rx="14" fill="rgba(255,255,255,0.16)" stroke="#4ade80" stroke-width="2"/>
+    <text x="210" y="254" text-anchor="middle" fill="#86efac" font-family="sans-serif" font-weight="800" font-size="15">04 GIẢI KK (10 TRIỆU) • GIẢI TẬP THỂ TRƯỜNG (20 TRIỆU)</text>
+    <text x="210" y="280" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="700" font-size="14">Hạn gửi danh sách BM01 trước 30/11/2026</text>
+  </g>
+  <rect x="755" y="400" width="380" height="46" rx="23" fill="#22c55e"/>
+  <text x="945" y="429" text-anchor="middle" fill="#052e16" font-family="sans-serif" font-weight="900" font-size="16">ĐỒNG BỘ 2 CHIỀU: LOCAL &amp; GOOGLE DRIVE</text>
+</svg>

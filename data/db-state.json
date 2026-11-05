@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "soGddt": "tỉnh An Giang",
+    "nguoiPhuTrach": "Thầy/Cô Phụ trách CNTT & Đoàn Trường",
+    "chucVuPhuTrach": "Cán bộ phụ trách cuộc thi",
+    "dienThoaiPhuTrach": "02963 822 xxx",
+    "emailPhuTrach": "c3nguyensinhsac@angiang.edu.vn",
+    "autoCountFromStudents": true,
+    "driveFolderId": "1a_hJhS5wetmMRktY6qfSVCqNN3pQUuCb",
+    "driveFolderUrl": "https://drive.google.com/drive/folders/1a_hJhS5wetmMRktY6qfSVCqNN3pQUuCb?usp=sharing",
+    "appsScriptUrl": "https://script.google.com/macros/s/AKfycbykh0lOPK04OGlbq-FgocezIIGs1YdJhOypzmB9gZc6Dm9PSYzhOTx8d3WuxxggLHmBAA/exec",
+    "driveFileId": "",
+    "driveFileUrl": "https://docs.google.com/spreadsheets/d/1NzbIzvVMjYesNWaSt-pGGhEUGaHVx5GL/edit?usp=drivesdk&ouid=108381351267098461385&rtpof=true&sd=true",
+    "lastLocalSync": "2026-11-05T05:28:11.725Z",
+    "lastDriveSync": "2026-11-05T05:16:53.720Z",
+    "driveSyncStatus": "synced",
+    "driveSyncMessage": "Đã đồng bộ 2 chiều thành công lên Google Drive!"
+  },
+  "bm01Rows": [
+    {
+      "stt": 1,
+      "schoolName": "Trường THPT Nguyễn Sinh Sắc",
+      "ward": "Phường Long Thạnh, TX. Tân Châu, An Giang",
+      "studentCount": 1,
+      "contactName": "Ban Tổ chức Cấp Trường - THPT Nguyễn Sinh Sắc",
+      "contactRole": "Giáo viên phụ trách Tin học / Đoàn Thanh niên",
+      "contactEmail": "c3nguyensinhsac@angiang.edu.vn",
+      "contactPhone": "0918000000"
+    }
+  ],
+  "students": [
+    {
+      "id": "NSS-AI-001",
+      "fullName": "Lý Thành Luân",
+      "dob": "1988-03-15",
+      "gender": "Nam",
+      "className": "12A1",
+      "cccd": "123456789",
+      "phone": "123456789",
+      "email": "lythanhluan2021@gmail.com",
+      "examLang": "Tiếng Việt",
+      "parentName": "gádfsdf",
+      "parentPhone": "123469879",
+      "consent": true,
+      "createdAt": "12:16:45 5/11/2026"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b2447"/>
+      <stop offset="55%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="520" fill="url(#bg2)"/>
+  <!-- Laptop & Gmetrix Interface Illustration -->
+  <g transform="translate(730, 85)">
+    <rect x="30" y="20" width="360" height="230" rx="18" fill="#0f172a" stroke="#38bdf8" stroke-width="4"/>
+    <rect x="46" y="38" width="328" height="194" rx="10" fill="#1e293b"/>
+    <rect x="64" y="56" width="150" height="26" rx="6" fill="#e11d48"/>
+    <text x="139" y="74" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="800" font-size="14">GMETRIX GEN AI</text>
+    <rect x="64" y="96" width="290" height="18" rx="4" fill="#334155"/>
+    <rect x="64" y="124" width="240" height="18" rx="4" fill="#334155"/>
+    <rect x="64" y="156" width="135" height="52" rx="8" fill="#0284c7"/>
+    <text x="131" y="187" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="800" font-size="16">≥ 700/1000 Đ</text>
+    <rect x="215" y="156" width="139" height="52" rx="8" fill="#16a34a"/>
+    <text x="284" y="187" text-anchor="middle" fill="#fff" font-family="sans-serif" font-weight="800" font-size="15">500 SUẤT/TRƯỜNG</text>
+    <path d="M0 250 H420 L390 280 H30 Z" fill="#94a3b8"/>
+  </g>
+  <rect x="745" y="405" width="390" height="46" rx="23" fill="#f59e0b"/>
+  <text x="940" y="434" text-anchor="middle" fill="#0f172a" font-family="sans-serif" font-weight="900" font-size="17">VÒNG CƠ SỞ: 02/11/2026 – 30/12/2026</text>
+</svg>

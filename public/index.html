@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>AI OR BEHIND 2026-2027 | Trường THPT Nguyễn Sinh Sắc</title>
+  <link rel="icon" type="image/jpeg" href="/assets/logo-nss.jpg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+  <!-- Thông báo Toast -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- HEADER TINH GỌN TRÊN 1 HÀNG DUY NHẤT (KHÔNG TRÙNG LẶP) -->
+  <header class="main-header">
+    <div class="header-inner">
+      <a href="#trang-chu" class="brand-school">
+        <img src="/assets/logo-nss.jpg" alt="Logo THPT Nguyễn Sinh Sắc" class="school-logo" />
+        <div class="school-title-wrap">
+          <span class="school-name">THPT NGUYỄN SINH SẮC</span>
+          <span class="school-loc">Tân Châu – An Giang</span>
+        </div>
+      </a>
+
+      <nav class="desktop-nav">
+        <a href="#trang-chu">Trang chủ</a>
+        <a href="#lo-trinh">Lộ trình 3 vòng</a>
+        <a href="javascript:void(0)" onclick="openFileViewer('cv1751')">📄 Tài liệu &amp; Thể lệ</a>
+        <a href="#tra-cuu">Tra cứu ĐK</a>
+      </nav>
+
+      <div class="header-right-actions">
+        <div class="organizer-logos" title="Đơn vị tổ chức: Viettel &amp; IIG Việt Nam">
+          <img src="/assets/image2.png" alt="Viettel" class="org-logo" />
+          <img src="/assets/image1.png" alt="IIG" class="org-logo" />
+        </div>
+        <a href="#dang-ky" class="btn btn-primary" style="padding:8px 14px; min-height:38px; font-size:0.82rem; border-radius:10px; white-space:nowrap;">
+          ✍️ Đăng ký
+        </a>
+        <a href="/admin" class="btn btn-outline" style="padding:8px 12px; min-height:38px; font-size:0.8rem; border-radius:10px; white-space:nowrap;">
+          ⚙️ Quản trị
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO: LIVESHOW 5 BANNER TỰ ĐỘNG TRƯỢT -->
+  <section id="trang-chu" class="hero-section" style="padding:18px 14px 24px;">
+    <div style="max-width:1180px; margin:0 auto;">
+
+      <div class="banner-slideshow-wrap" id="heroSlideshow" style="margin-bottom:16px;">
+        <button type="button" class="slideshow-nav-btn prev" onclick="changeBannerSlide(-1)" aria-label="Trước">❮</button>
+        <button type="button" class="slideshow-nav-btn next" onclick="changeBannerSlide(1)" aria-label="Tiếp">❯</button>
+
+        <div class="slides-track" id="bannerSlidesTrack">
+          <div class="banner-slide-img">
+            <img src="/assets/1.png?v=20261105-2" alt="Banner 1 - Phát động Cuộc thi AI or Behind 2026-2027" />
+          </div>
+          <div class="banner-slide-img">
+            <img src="/assets/2.png?v=20261105-2" alt="Banner 2 - Cuộc thi AI or Behind 2026-2027" loading="lazy" />
+          </div>
+          <div class="banner-slide-img">
+            <img src="/assets/3.png?v=20261105-2" alt="Banner 3 - Cuộc thi AI or Behind 2026-2027" loading="lazy" />
+          </div>
+          <div class="banner-slide-img">
+            <img src="/assets/4.png?v=20261105-2" alt="Banner 4 - Cuộc thi AI or Behind 2026-2027" loading="lazy" />
+          </div>
+          <div class="banner-slide-img">
+            <img src="/assets/5.png?v=20261105-2" alt="Banner 5 - Cuộc thi AI or Behind 2026-2027" loading="lazy" />
+          </div>
+        </div>
+
+        <div class="slideshow-bottom-bar">
+          <div class="slide-auto-progress" id="slideProgressBar"></div>
+          <div class="slide-dots" id="bannerSlideDots">
+            <button type="button" class="slide-dot active" onclick="goToBannerSlide(0)">1</button>
+            <button type="button" class="slide-dot" onclick="goToBannerSlide(1)">2</button>
+            <button type="button" class="slide-dot" onclick="goToBannerSlide(2)">3</button>
+            <button type="button" class="slide-dot" onclick="goToBannerSlide(3)">4</button>
+            <button type="button" class="slide-dot" onclick="goToBannerSlide(4)">5</button>
+          </div>
+          <span style="font-size:0.72rem; color:rgba(255,255,255,0.85);">⇄ Vuốt để chuyển</span>
+        </div>
+      </div>
+
+      <!-- THANH THỐNG KÊ NHANH + 3 NÚT XEM VĂN BẢN TRỰC TIẾP TRÊN GIAO DIỆN -->
+      <div class="compact-summary-bar">
+        <div class="summary-quota-pill">
+          <div>
+            <span style="font-size:0.75rem; opacity:0.85;">Số lượng đã đăng ký:</span>
+            <div style="font-size:1.2rem; font-weight:900; color:#fde047;">
+              <span id="heroStudentCount">0</span> / 500 <span style="font-size:0.78rem; font-weight:600; color:#fff;" id="heroRemainingSlots">(Còn 500 suất)</span>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <span style="font-size:0.72rem; opacity:0.85;">Hạn chót 30/11/2026:</span>
+            <div style="font-size:0.95rem; font-weight:800; color:#fff;">
+              ⏳ Còn <span id="cdDays">25</span> ngày <span id="cdHours">12</span>h <span id="cdMins">00</span>p
+            </div>
+          </div>
+        </div>
+
+        <div class="doc-quick-buttons">
+          <button type="button" class="doc-preview-btn" onclick="openFileViewer('cv1751')">
+            <span class="doc-icon">📕</span>
+            <div>
+              <strong>Thể lệ Cuộc thi (CV 1751)</strong>
+              <span>Xem trực tiếp trên trang</span>
+            </div>
+          </button>
+
+          <button type="button" class="doc-preview-btn" onclick="openFileViewer('cv8344')">
+            <span class="doc-icon">📘</span>
+            <div>
+              <strong>Công văn Sở GD&amp;ĐT (CV 8344)</strong>
+              <span>Xem trực tiếp trên trang</span>
+            </div>
+          </button>
+
+          <button type="button" class="doc-preview-btn" onclick="openFileViewer('bm01')">
+            <span class="doc-icon">📊</span>
+            <div>
+              <strong>Biểu mẫu BM01 (.xlsx)</strong>
+              <span>Xem bảng tổng hợp trực tiếp</span>
+            </div>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- LỘ TRÌNH 3 VÒNG THI SIÊU GỌN -->
+  <section id="lo-trinh" class="section" style="padding:20px 14px 8px;">
+    <div class="compact-steps-grid">
+      <div class="compact-step active">
+        <div class="cs-badge">VÒNG 1 • CẤP CƠ SỞ</div>
+        <h3>02/11 – 30/12/2026</h3>
+        <p>Thi máy tính tại trường bài <strong>Gmetrix Gen AI</strong>. Đạt ≥ 700đ nhận GCN Điện tử.</p>
+      </div>
+      <div class="compact-step">
+        <div class="cs-badge">VÒNG 2 • QUỐC GIA</div>
+        <h3>14/03/2027</h3>
+        <p>Thi theo đội (3–5 HS). Đạt ≥ 700đ nhận <strong>Chứng chỉ Quốc tế Gen AI</strong> Pearson.</p>
+      </div>
+      <div class="compact-step">
+        <div class="cs-badge">VÒNG 3 • CHUNG KẾT</div>
+        <h3>11/04/2027</h3>
+        <p>Thi <strong>AI - IT Specialist</strong> &amp; <strong>Dự án AI (Tiếng Anh)</strong>. Giải Nhất <strong>100 Triệu</strong>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PHIẾU ĐĂNG KÝ HỌC SINH -->
+  <section id="dang-ky" class="section" style="padding-top:16px;">
+    <div class="section-header" style="margin-bottom:16px;">
+      <span class="section-tag">Trường THPT Nguyễn Sinh Sắc</span>
+      <h2 class="section-title">Phiếu Đăng ký Tham gia Dự thi</h2>
+    </div>
+
+    <div class="register-card">
+      <form id="studentRegForm" novalidate>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="stFullName">Họ và tên học sinh <span class="req">(*)</span></label>
+            <input type="text" id="stFullName" class="form-control" placeholder="VD: Nguyễn Minh Khôi" required />
+          </div>
+
+          <div class="form-group">
+            <label for="stDob">Ngày sinh <span class="req">(*)</span></label>
+            <input type="date" id="stDob" class="form-control" required />
+          </div>
+
+          <div class="form-group">
+            <label for="stClass">Lớp <span class="req">(*)</span></label>
+            <input type="text" id="stClass" class="form-control" placeholder="VD: 10A1, 11A2, 12A1..." required />
+            <div class="quick-grade-pills">
+              <button type="button" class="grade-pill" onclick="fillClassPrefix('10A1')">Khối 10</button>
+              <button type="button" class="grade-pill" onclick="fillClassPrefix('11A1')">Khối 11</button>
+              <button type="button" class="grade-pill" onclick="fillClassPrefix('12A1')">Khối 12</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="stGender">Giới tính</label>
+            <select id="stGender" class="form-control">
+              <option value="Nam">Nam</option>
+              <option value="Nữ">Nữ</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="stCccd">Số CCCD / Mã định danh <span class="req">(*)</span></label>
+            <input type="text" id="stCccd" class="form-control" inputmode="numeric" placeholder="Nhập số CCCD hoặc Mã HS" required />
+          </div>
+
+          <div class="form-group">
+            <label for="stExamLang">Ngôn ngữ bài thi Gmetrix <span class="req">(*)</span></label>
+            <select id="stExamLang" class="form-control">
+              <option value="Tiếng Việt">🇻🇳 Tiếng Việt</option>
+              <option value="Tiếng Anh">🇬🇧 Tiếng Anh</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="stPhone">Số điện thoại học sinh <span class="req">(*)</span></label>
+            <input type="tel" id="stPhone" class="form-control" inputmode="tel" placeholder="VD: 0912345678" required />
+          </div>
+
+          <div class="form-group">
+            <label for="stEmail">Email nhận code Gmetrix <span class="req">(*)</span></label>
+            <input type="email" id="stEmail" class="form-control" inputmode="email" placeholder="VD: hocsinh@gmail.com" required />
+          </div>
+
+          <div class="form-group">
+            <label for="stParentName">Họ tên Phụ huynh / Giám hộ <span class="req">(*)</span></label>
+            <input type="text" id="stParentName" class="form-control" placeholder="Họ tên Cha/Mẹ/Người giám hộ" required />
+          </div>
+
+          <div class="form-group">
+            <label for="stParentPhone">SĐT Phụ huynh <span class="req">(*)</span></label>
+            <input type="tel" id="stParentPhone" class="form-control" inputmode="tel" placeholder="SĐT Phụ huynh" required />
+          </div>
+
+          <div class="form-group full-width">
+            <div class="consent-box">
+              <label class="consent-check">
+                <input type="checkbox" id="stConsent" checked required />
+                <span>
+                  Em và Phụ huynh đồng ý tham gia cuộc thi và chấp thuận
+                  <a href="https://iigvietnam.com/chinh-sach-bao-mat-thong-tin-khach-hang/" target="_blank" rel="noopener" style="color:var(--nss-blue);">Chính sách bảo vệ dữ liệu cá nhân của IIG Việt Nam</a>.
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" id="submitRegBtn" class="btn btn-primary" style="width:100%; margin-top:16px; font-size:1.02rem;">
+          ✅ GỬI ĐĂNG KÝ THAM GIA NGAY
+        </button>
+      </form>
+    </div>
+  </section>
+
+  <!-- TRA CỨU NHANH THÍ SINH ĐÃ ĐĂNG KÝ -->
+  <section id="tra-cuu" class="section" style="padding-top:6px;">
+    <div style="background:#fff; border-radius:20px; padding:18px 16px; border:1px solid var(--border-color); box-shadow:var(--shadow-soft);">
+      <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px;">
+        <h3 style="font-size:1.02rem; font-weight:800; color:var(--nss-blue-dark);">
+          🔍 Tra cứu Thí sinh Đã Đăng ký (<span id="tabStudentCountBadge">0</span>/500)
+        </h3>
+        <input type="search" id="searchStudentInput" class="form-control" placeholder="Tìm theo tên hoặc lớp (VD: 10A1)..." style="max-width:280px; min-height:38px; padding:6px 12px;" oninput="renderStudentList()" />
+      </div>
+      <div id="studentListContainer" class="student-mobile-cards"></div>
+    </div>
+  </section>
+
+  <!-- FOOTER GỌN -->
+  <footer style="background:#0a1540; color:rgba(255,255,255,0.85); padding:16px; font-size:0.78rem; text-align:center;">
+    <strong>TRƯỜNG THPT NGUYỄN SINH SẮC (Tân Châu – An Giang)</strong> • Cuộc thi AI OR BEHIND 2026–2027 • Hotline BTC IIG: 1900 636 929
+  </footer>
+
+  <!-- MODAL XEM TRỰC TIẾP VĂN BẢN / FILE TRÊN GIAO DIỆN (PDF & BẢNG BM01) -->
+  <div id="docViewerModal" class="modal-backdrop">
+    <div class="modal-card doc-viewer-card">
+      <div class="doc-viewer-header">
+        <div class="doc-viewer-tabs">
+          <button type="button" class="dv-tab active" id="dvTab_cv1751" onclick="switchFileViewerTab('cv1751')">
+            📕 Thể lệ &amp; CV 1751 (IIG)
+          </button>
+          <button type="button" class="dv-tab" id="dvTab_cv8344" onclick="switchFileViewerTab('cv8344')">
+            📘 CV 8344 (Sở GD&amp;ĐT An Giang)
+          </button>
+          <button type="button" class="dv-tab" id="dvTab_bm01" onclick="switchFileViewerTab('bm01')">
+            📊 Biểu mẫu BM01 (.xlsx)
+          </button>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <a id="dvDownloadLink" href="/docs/CV-1751-IIG-The-le-AI-or-Behind-2026-2027.pdf" target="_blank" class="btn btn-blue" style="padding:6px 12px; min-height:34px; font-size:0.76rem;">
+            ↗ Mở toàn màn hình / Tải về
+          </a>
+          <button type="button" onclick="closeFileViewer()" style="border:none; background:#fee2e2; color:#dc2626; width:34px; height:34px; border-radius:8px; font-weight:900; cursor:pointer;">✕</button>
+        </div>
+      </div>
+
+      <div id="dvPdfBox" class="doc-viewer-body">
+        <iframe id="dvPdfFrame" src="" title="Xem văn bản trực tiếp" style="width:100%; height:100%; border:none;"></iframe>
+      </div>
+
+      <div id="dvBm01Box" class="doc-viewer-body" style="display:none; overflow:auto; padding:16px; background:#fff;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+          <strong>BIỂU MẪU BM01 – DANH SÁCH ĐĂNG KÝ VÒNG THI CẤP CƠ SỞ</strong>
+          <a href="/api/download-bm01" class="btn btn-primary" style="padding:7px 12px; min-height:36px; font-size:0.78rem;">📥 Tải file BM01.xlsx</a>
+        </div>
+        <div class="table-scroll-container">
+          <table class="bm01-table">
+            <thead>
+              <tr>
+                <th rowspan="2">STT</th>
+                <th rowspan="2">Tên trường THPT (*)</th>
+                <th rowspan="2">Phường/Xã trực thuộc (*)</th>
+                <th rowspan="2">Số lượng thí sinh đăng ký (*)</th>
+                <th colspan="4">Thông tin đầu mối nhận code bài thi Gmetrix (*)</th>
+              </tr>
+              <tr>
+                <th>Họ và tên (*)</th>
+                <th>Chức vụ (*)</th>
+                <th>Email (*)</th>
+                <th>Số điện thoại (*)</th>
+              </tr>
+            </thead>
+            <tbody id="bm01PreviewBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL THẺ XÁC NHẬN ĐĂNG KÝ THÀNH CÔNG -->
+  <div id="ticketModal" class="modal-backdrop">
+    <div class="modal-card" style="text-align:center;">
+      <div style="width:56px; height:56px; border-radius:50%; background:#dcfce7; color:#16a34a; font-size:1.7rem; display:flex; align-items:center; justify-content:center; margin:0 auto 10px;">🎉</div>
+      <h3 style="font-size:1.2rem; color:var(--nss-blue-dark); font-weight:900;">ĐĂNG KÝ DỰ THI THÀNH CÔNG!</h3>
+      <div id="ticketContentBox" style="background:#f8fafc; border:1.5px dashed var(--nss-blue); border-radius:14px; padding:14px; margin:14px 0; text-align:left; font-size:0.86rem;"></div>
+      <button type="button" class="btn btn-primary" style="width:100%;" onclick="closeTicketModal()">Hoàn tất</button>
+    </div>
+  </div>
+
+  <!-- STICKY BOTTOM NAV CHO ĐIỆN THOẠI -->
+  <nav class="mobile-bottom-nav" aria-label="Điều hướng di động">
+    <a href="#trang-chu" class="mob-nav-item active" onclick="setMobNavActive(this)">
+      <span class="mob-icon">🏠</span>
+      <span>Trang chủ</span>
+    </a>
+    <a href="javascript:void(0)" class="mob-nav-item" onclick="openFileViewer('cv1751')">
+      <span class="mob-icon">📄</span>
+      <span>Tài liệu</span>
+    </a>
+    <a href="#dang-ky" class="mob-nav-item center-cta" onclick="setMobNavActive(this)">
+      <span class="mob-icon">✍️</span>
+      <span>Đăng ký</span>
+    </a>
+    <a href="#tra-cuu" class="mob-nav-item" onclick="setMobNavActive(this)">
+      <span class="mob-icon">🔍</span>
+      <span>Tra cứu</span>
+    </a>
+    <a href="/admin" class="mob-nav-item">
+      <span class="mob-icon">⚙️</span>
+      <span>Quản trị</span>
+    </a>
+  </nav>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+  <title>Dashboard Admin Quản lý CSDL | Trường THPT Nguyễn Sinh Sắc</title>
+  <link rel="icon" type="image/jpeg" href="/assets/logo-nss.jpg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+  <!-- Thông báo Toast -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- MÀN HÌNH ĐĂNG NHẬP QUẢN TRỊ (Tài khoản: admin / Mật khẩu: admin) -->
+  <div id="adminLoginOverlay" style="position:fixed; inset:0; z-index:500; background:linear-gradient(145deg, #071135 0%, #1b3189 60%, #9f1239 100%); display:flex; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#fff; border-radius:24px; max-width:420px; width:100%; padding:28px 24px; box-shadow:0 24px 60px rgba(0,0,0,0.45); text-align:center;">
+      <img src="/assets/logo-nss.jpg" alt="Logo THPT Nguyễn Sinh Sắc" style="width:72px; height:72px; border-radius:50%; border:3px solid var(--nss-blue); margin-bottom:10px;" />
+      <div style="font-size:0.75rem; font-weight:800; color:var(--nss-lotus); text-transform:uppercase; letter-spacing:0.05em;">
+        Hệ thống Quản trị CSDL BM01
+      </div>
+      <h2 style="font-size:1.28rem; font-weight:900; color:var(--nss-blue-dark); margin:4px 0 6px;">
+        TRƯỜNG THPT NGUYỄN SINH SẮC
+      </h2>
+      <p style="font-size:0.82rem; color:var(--text-muted); margin-bottom:18px;">
+        Vui lòng đăng nhập tài khoản Quản trị để truy cập Dashboard CSDL &amp; Đồng bộ Google Drive.
+      </p>
+
+      <form id="adminLoginForm" style="text-align:left; display:flex; flex-direction:column; gap:12px;">
+        <div class="form-group">
+          <label for="loginUsername">👤 Tài khoản quản trị</label>
+          <input type="text" id="loginUsername" class="form-control" placeholder="Nhập tài khoản (admin)" autocomplete="username" required />
+        </div>
+
+        <div class="form-group">
+          <label for="loginPassword">🔑 Mật khẩu</label>
+          <input type="password" id="loginPassword" class="form-control" placeholder="Nhập mật khẩu" autocomplete="current-password" required />
+        </div>
+
+        <div id="loginErrorMsg" style="display:none; background:#fee2e2; color:#b91c1c; font-size:0.8rem; font-weight:700; padding:9px 12px; border-radius:10px; text-align:center;"></div>
+
+        <button type="submit" id="loginSubmitBtn" class="btn btn-primary" style="width:100%; margin-top:4px; font-size:0.96rem;">
+          🔐 ĐĂNG NHẬP QUẢN TRỊ
+        </button>
+
+        <a href="/" class="btn btn-outline" style="width:100%; font-size:0.84rem; min-height:42px;">
+          🏠 Quay về Trang chủ Học sinh
+        </a>
+      </form>
+    </div>
+  </div>
+
+  <!-- Header Admin Tinh gọn 1 Hàng -->
+  <header class="main-header">
+    <div class="header-inner">
+      <a href="/admin" class="brand-school">
+        <img src="/assets/logo-nss.jpg" alt="Logo THPT Nguyễn Sinh Sắc" class="school-logo" />
+        <div class="school-title-wrap">
+          <span class="school-name">DASHBOARD ADMIN – THPT NGUYỄN SINH SẮC</span>
+          <span class="school-loc">Quản lý CSDL BM01 &amp; Đồng bộ Google Drive</span>
+        </div>
+      </a>
+
+      <div class="header-right-actions">
+        <a href="/" class="btn btn-outline" style="padding:8px 12px; min-height:38px; font-size:0.8rem; border-radius:10px; white-space:nowrap;">
+          🏠 Trang chủ
+        </a>
+        <button type="button" class="btn btn-outline" style="padding:8px 12px; min-height:38px; font-size:0.8rem; border-radius:10px; white-space:nowrap;" onclick="printStudentList()">
+          🖨️ In DS Học sinh
+        </button>
+        <a href="/api/download-bm01" class="btn btn-primary" style="padding:8px 12px; min-height:38px; font-size:0.8rem; border-radius:10px; white-space:nowrap;">
+          📥 Xuất BM01.xlsx
+        </a>
+        <button type="button" class="btn btn-outline" style="padding:8px 12px; min-height:38px; font-size:0.8rem; border-radius:10px; border-color:#dc2626; color:#dc2626; white-space:nowrap;" onclick="logoutAdmin()">
+          🚪 Đăng xuất
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin-layout">
+    <!-- 4 THẺ KPI THỐNG KÊ THỜI GIAN THỰC -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Tổng Thí sinh Đã Đăng ký</div>
+        <div class="kpi-val" style="color:var(--nss-lotus);"><span id="kpiTotalStudents">0</span> / 500</div>
+        <div class="progress-track" style="height:8px; margin:6px 0;">
+          <div class="progress-fill" id="kpiProgressBar" style="width:2%;"></div>
+        </div>
+        <div class="kpi-sub" id="kpiRemainingText">Còn 500 chỉ tiêu Vòng cơ sở</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Phân bố theo Khối Lớp</div>
+        <div class="kpi-val" style="font-size:1.25rem;" id="kpiGradeBreakdown">K10: 0 • K11: 0 • K12: 0</div>
+        <div class="kpi-sub">Trường THPT Nguyễn Sinh Sắc</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Ngôn ngữ Bài thi Gmetrix</div>
+        <div class="kpi-val" style="font-size:1.25rem;" id="kpiLangBreakdown">🇻🇳 TV: 0 • 🇬🇧 TA: 0</div>
+        <div class="kpi-sub">Gmetrix Generative AI Foundations</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">Trạng thái CSDL Song song</div>
+        <div class="kpi-val" style="font-size:1.05rem; color:var(--nss-green);" id="kpiSyncStatus">✓ Đã đồng bộ Local &amp; Drive</div>
+        <div class="kpi-sub" id="kpiLastSyncTime">Cập nhật tự động 2 chiều</div>
+      </div>
+    </div>
+
+    <!-- THANH ĐIỀU HƯỚNG 4 TAB QUẢN TRỊ -->
+    <div class="admin-nav-pills">
+      <button type="button" class="admin-tab-btn active" id="admTab_students" onclick="switchAdminTab('students')">
+        👨‍🎓 1. Quản lý DS Thí sinh Đăng ký (<span id="admCountBadge">0</span>)
+      </button>
+      <button type="button" class="admin-tab-btn" id="admTab_bm01" onclick="switchAdminTab('bm01')">
+        📋 2. Biểu mẫu BM01 Chuẩn (Sheet: Mẫu 1)
+      </button>
+      <button type="button" class="admin-tab-btn" id="admTab_docs" onclick="switchAdminTab('docs')">
+        📕 3. Xem Trực tiếp 2 File Công văn PDF
+      </button>
+      <button type="button" class="admin-tab-btn" id="admTab_drive" onclick="switchAdminTab('drive')">
+        ☁️ 4. Đồng bộ Google Drive &amp; Gửi Báo cáo
+      </button>
+    </div>
+
+    <!-- ==================== TAB 1: QUẢN LÝ DANH SÁCH THÍ SINH CHI TIẾT ==================== -->
+    <section id="admPanel_students" class="bm01-sheet-wrapper" style="padding:16px;">
+      <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:10px; margin-bottom:14px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; flex:1;">
+          <input type="search" id="admSearchInput" class="form-control" placeholder="🔍 Tìm theo tên, lớp, CCCD, SĐT, mã ĐK..." style="max-width:320px; min-height:40px; padding:6px 12px;" oninput="renderAdminStudentTable()" />
+          <select id="admGradeFilter" class="form-control" style="max-width:140px; min-height:40px; padding:6px 10px;" onchange="renderAdminStudentTable()">
+            <option value="">Tất cả khối</option>
+            <option value="10">Khối 10</option>
+            <option value="11">Khối 11</option>
+            <option value="12">Khối 12</option>
+          </select>
+          <select id="admLangFilter" class="form-control" style="max-width:155px; min-height:40px; padding:6px 10px;" onchange="renderAdminStudentTable()">
+            <option value="">Mọi ngôn ngữ</option>
+            <option value="Tiếng Việt">Tiếng Việt</option>
+            <option value="Tiếng Anh">Tiếng Anh</option>
+          </select>
+        </div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-primary" style="padding:8px 14px; min-height:40px; font-size:0.82rem;" onclick="openStudentModal()">
+            ➕ Thêm Thí sinh mới
+          </button>
+          <a href="/api/download-bm01" class="btn btn-blue" style="padding:8px 14px; min-height:40px; font-size:0.82rem;">
+            📥 Tải file Excel (Theo mẫu BM01)
+          </a>
+          <button type="button" class="btn btn-outline" style="padding:8px 14px; min-height:40px; font-size:0.82rem; border-color:var(--nss-blue); color:var(--nss-blue-dark);" onclick="printStudentList()">
+            🖨️ In DS Học sinh đăng ký
+          </button>
+        </div>
+      </div>
+
+      <div class="table-scroll-container" style="max-height:540px; overflow-y:auto;">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>STT</th>
+              <th>Mã ĐK</th>
+              <th>Họ và tên học sinh</th>
+              <th>Ngày sinh</th>
+              <th>Giới tính</th>
+              <th>Lớp</th>
+              <th>Số CCCD / Định danh</th>
+              <th>SĐT Học sinh</th>
+              <th>Email nhận code</th>
+              <th>Đề thi</th>
+              <th>Họ tên &amp; SĐT Phụ huynh</th>
+              <th>Thời gian ĐK</th>
+              <th style="text-align:center;">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="admStudentTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: QUẢN LÝ & CHỈNH SỬA BIỂU MẪU BM01 CHUẨN ==================== -->
+    <section id="admPanel_bm01" class="bm01-sheet-wrapper" style="display:none;">
+      <div class="bm01-toolbar">
+        <div>
+          <strong style="color:var(--nss-blue-dark); font-size:0.88rem;">
+            📄 Biểu mẫu BM01 Gốc (Sheet <code>Mẫu 1</code> trong <code>BM01-danh-sach-TS-vong-thi-cap-co-so.xlsx</code>)
+          </strong>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-outline" style="padding:7px 12px; min-height:36px; font-size:0.78rem;" onclick="addBm01RowAdmin()">
+            ➕ Thêm dòng trường
+          </button>
+          <button type="button" class="btn btn-blue" style="padding:7px 14px; min-height:36px; font-size:0.78rem;" onclick="saveBm01FromAdmin()">
+            💾 Lưu vào File BM01.xlsx &amp; Đồng bộ Drive
+          </button>
+          <a href="/api/download-bm01" class="btn btn-primary" style="padding:7px 14px; min-height:36px; font-size:0.78rem;">
+            📥 Tải file Excel (Mẫu gốc)
+          </a>
+        </div>
+      </div>
+
+      <div class="bm01-paper">
+        <div class="bm01-official-logos">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <img src="/assets/image2.png" alt="Viettel" style="height:28px;" />
+            <img src="/assets/image1.png" alt="IIG Việt Nam" style="height:32px;" />
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <img src="/assets/logo-nss.jpg" alt="THPT Nguyễn Sinh Sắc" style="width:38px; height:38px; border-radius:50%;" />
+            <span style="font-family:'Be Vietnam Pro',sans-serif; font-size:0.78rem; font-weight:700;">
+              TRƯỜNG THPT NGUYỄN SINH SẮC – AN GIANG
+            </span>
+          </div>
+        </div>
+
+        <div class="bm01-official-title">
+          DANH SÁCH CÁC TRƯỜNG ĐĂNG KÝ THAM DỰ VÒNG THI CẤP CƠ SỞ<br />
+          CUỘC THI AI OR BEHIND NĂM HỌC 2026 - 2027
+        </div>
+
+        <div class="bm01-meta-grid">
+          <div class="bm01-meta-item">
+            <label>Sở Giáo dục và Đào tạo (Ô A3):</label>
+            <input type="text" id="admMetaSoGddt" />
+          </div>
+          <div class="bm01-meta-item">
+            <label>Người phụ trách đăng ký (Ô A4):</label>
+            <input type="text" id="admMetaNguoiPt" />
+          </div>
+          <div class="bm01-meta-item">
+            <label>Chức vụ (Ô G4):</label>
+            <input type="text" id="admMetaChucVu" />
+          </div>
+          <div class="bm01-meta-item">
+            <label>Điện thoại liên hệ (Ô A5):</label>
+            <input type="text" id="admMetaSdt" />
+          </div>
+          <div class="bm01-meta-item">
+            <label>Email liên hệ (Ô G5):</label>
+            <input type="email" id="admMetaEmail" />
+          </div>
+          <div class="bm01-meta-item" style="justify-content:center;">
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; margin-top:16px; color:var(--nss-blue-dark);">
+              <input type="checkbox" id="admMetaAutoCount" checked onchange="toggleAutoCountAdmin(this.checked)" style="width:18px; height:18px;" />
+              Tự động cập nhật Cột D theo tổng số Học sinh đăng ký
+            </label>
+          </div>
+        </div>
+
+        <div class="table-scroll-container">
+          <table class="bm01-table">
+            <thead>
+              <tr>
+                <th rowspan="2" style="width:50px;">STT</th>
+                <th rowspan="2" style="width:210px;">Tên trường THPT <span class="req-star">(*)</span></th>
+                <th rowspan="2" style="width:170px;">Phường/Xã trực thuộc <span class="req-star">(*)</span></th>
+                <th rowspan="2" style="width:125px;">Số lượng thí sinh đăng ký tham dự <span class="req-star">(*)</span></th>
+                <th colspan="4">Thông tin đầu mối nhận code bài thi Gmetrix <span class="req-star">(*)</span></th>
+                <th rowspan="2" style="width:50px;">Xóa</th>
+              </tr>
+              <tr>
+                <th>Họ và tên <span class="req-star">(*)</span></th>
+                <th>Chức vụ <span class="req-star">(*)</span></th>
+                <th>Email <span class="req-star">(*)</span></th>
+                <th>Số điện thoại <span class="req-star">(*)</span></th>
+              </tr>
+            </thead>
+            <tbody id="admBm01TableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: XEM TRỰC TIẾP 2 FILE CÔNG VĂN PDF ==================== -->
+    <section id="admPanel_docs" class="bm01-sheet-wrapper" style="display:none; overflow:hidden;">
+      <div class="bm01-toolbar">
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-blue" id="admDocBtn1751" style="padding:7px 14px; min-height:36px; font-size:0.8rem;" onclick="switchAdminPdf('/docs/CV-1751-IIG-The-le-AI-or-Behind-2026-2027.pdf', this)">
+            📕 1. Công văn 1751 &amp; Thể lệ IIG Việt Nam (10 trang)
+          </button>
+          <button type="button" class="btn btn-outline" id="admDocBtn8344" style="padding:7px 14px; min-height:36px; font-size:0.8rem;" onclick="switchAdminPdf('/docs/CV-8344-SGDDT-An-Giang-AI-or-Behind.pdf', this)">
+            📘 2. Công văn 8344 Sở GD&amp;ĐT Tỉnh An Giang (2 trang)
+          </button>
+        </div>
+        <a id="admDocExternalLink" href="/docs/CV-1751-IIG-The-le-AI-or-Behind-2026-2027.pdf" target="_blank" class="btn btn-primary" style="padding:7px 14px; min-height:36px; font-size:0.78rem;">
+          ↗ Mở Tab mới / Tải PDF
+        </a>
+      </div>
+      <div style="height:72vh; width:100%; background:#334155;">
+        <iframe id="admPdfIframe" src="/docs/CV-1751-IIG-The-le-AI-or-Behind-2026-2027.pdf" style="width:100%; height:100%; border:none;" title="Tài liệu PDF"></iframe>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: TRUNG TÂM ĐỒNG BỘ 2 CHIỀU GOOGLE DRIVE ==================== -->
+    <section id="admPanel_drive" style="display:none;">
+      <div class="drive-sync-card">
+        <h3 style="font-size:1.3rem; font-weight:800;">
+          ☁️ Đồng bộ 2 chiều: Thư mục Dự án (Local Excel) ↔ Google Drive
+        </h3>
+        <p style="font-size:0.88rem; opacity:0.9; margin-top:4px;">
+          Thư mục Google Drive của bạn: <a href="https://drive.google.com/drive/folders/1a_hJhS5wetmMRktY6qfSVCqNN3pQUuCb?usp=sharing" target="_blank" style="color:#fde047; font-weight:700;">https://drive.google.com/drive/folders/1a_hJhS5wetmMRktY6qfSVCqNN3pQUuCb</a>
+        </p>
+
+        <div class="drive-paths-grid">
+          <div class="path-box">
+            <strong>💻 File CSDL trong Thư mục Dự án:</strong>
+            <code>E:\IIGVN\BM01-danh-sach-TS-vong-thi-cap-co-so.xlsx</code>
+            <p style="font-size:0.78rem; margin-top:6px;">
+              Tự động đọc/ghi cả 2 chiều khi chỉnh sửa trên Web hoặc bấm Save trong Microsoft Excel.
+            </p>
+          </div>
+          <div class="path-box">
+            <strong>☁️ Cầu nối Google Apps Script Web App (Đồng bộ 2 chiều tự động):</strong>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+              <input type="url" id="admAppsScriptUrl" class="form-control" placeholder="Dán URL https://script.google.com/macros/s/.../exec" style="min-height:38px; padding:6px 10px; font-size:0.82rem;" />
+              <button type="button" class="btn btn-primary" style="min-height:38px; padding:6px 14px; font-size:0.8rem;" onclick="saveAdminDriveUrl()">
+                Lưu URL
+              </button>
+            </div>
+            <button type="button" class="btn btn-secondary" style="margin-top:8px; min-height:34px; padding:5px 12px; font-size:0.76rem;" onclick="copyAppsScriptFromAdmin()">
+              📋 Sao chép mã google-drive-sync-script.gs
+            </button>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;">
+          <button type="button" class="btn btn-primary" onclick="triggerAdminSync('to_drive')">
+            🔄 Đẩy từ Máy &amp; Web lên Google Drive
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="triggerAdminSync('from_drive')">
+            ⬇️ Kéo dữ liệu mới từ Google Drive về Máy
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="triggerAdminSync('from_local_excel')">
+            📂 Đọc lại từ file BM01.xlsx trong Thư mục Dự án
+          </button>
+          <a href="https://drive.google.com/drive/folders/1a_hJhS5wetmMRktY6qfSVCqNN3pQUuCb?usp=sharing" target="_blank" class="btn btn-secondary">
+            📂 Mở Thư mục Google Drive
+          </a>
+        </div>
+
+        <div style="margin-top:18px; padding-top:14px; border-top:1px solid rgba(255,255,255,0.2);">
+          <strong>📧 Gửi danh sách BM01 theo Công văn 8344/SGDĐT-QLCL&amp;CNTT (Trước 30/11/2026):</strong>
+          <div style="margin-top:8px;">
+            <a href="mailto:Aiorbehind@iigvietnam.edu.vn,phongktkd.soangiang@moet.edu.vn?subject=ĐĂNG KÝ DỰ THI AI OR BEHIND 2026-2027 - TRƯỜNG THPT NGUYỄN SINH SẮC (AN GIANG)"
+               class="btn btn-secondary" style="padding:8px 14px; min-height:38px; font-size:0.82rem;">
+              ✉️ Soạn Email gửi đồng thời BTC IIG &amp; Sở GD&amp;ĐT An Giang
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL THÊM / SỬA HỌC SINH TRONG ADMIN -->
+  <div id="admStudentModal" class="modal-backdrop">
+    <div class="modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 id="admModalTitle" style="font-size:1.1rem; font-weight:800; color:var(--nss-blue-dark);">
+          Thêm / Chỉnh sửa Thí sinh
+        </h3>
+        <button type="button" onclick="closeStudentModal()" style="border:none; background:none; font-size:1.3rem; cursor:pointer;">✕</button>
+      </div>
+
+      <form id="admStudentForm">
+        <input type="hidden" id="editStudentId" />
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Họ và tên học sinh (*)</label>
+            <input type="text" id="admStName" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label>Ngày sinh (*)</label>
+            <input type="date" id="admStDob" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label>Lớp (*)</label>
+            <input type="text" id="admStClass" class="form-control" placeholder="VD: 10A1" required />
+          </div>
+          <div class="form-group">
+            <label>Giới tính</label>
+            <select id="admStGender" class="form-control">
+              <option value="Nam">Nam</option>
+              <option value="Nữ">Nữ</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Số CCCD / Định danh (*)</label>
+            <input type="text" id="admStCccd" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label>Ngôn ngữ bài thi Gmetrix (*)</label>
+            <select id="admStLang" class="form-control">
+              <option value="Tiếng Việt">Tiếng Việt</option>
+              <option value="Tiếng Anh">Tiếng Anh</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>SĐT Học sinh (*)</label>
+            <input type="tel" id="admStPhone" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label>Email nhận code (*)</label>
+            <input type="email" id="admStEmail" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label>Họ tên Phụ huynh (*)</label>
+            <input type="text" id="admStParentName" class="form-control" required />
+          </div>
+          <div class="form-group">
+            <label>SĐT Phụ huynh (*)</label>
+            <input type="tel" id="admStParentPhone" class="form-control" required />
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:16px;">
+          <button type="submit" class="btn btn-primary" style="flex:1;">💾 Lưu vào CSDL BM01</button>
+          <button type="button" class="btn btn-outline" onclick="closeStudentModal()">Hủy</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- KHUNG IN BIỂU MẪU BM01 & DANH SÁCH THÍ SINH CHUẨN A4 -->
+  <div id="printReportContainer" class="print-only-container"></div>
+
+  <script src="/admin.js"></script>
+</body>
+</html>
+
