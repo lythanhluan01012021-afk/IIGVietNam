@@ -11,7 +11,7 @@
     "appsScriptUrl": "https://script.google.com/macros/s/AKfycbykh0lOPK04OGlbq-FgocezIIGs1YdJhOypzmB9gZc6Dm9PSYzhOTx8d3WuxxggLHmBAA/exec",
     "driveFileId": "",
     "driveFileUrl": "https://docs.google.com/spreadsheets/d/1m6tEuQzFj0On9Paht00Y2pW5Sat6a7va/edit?usp=drivesdk&ouid=108381351267098461385&rtpof=true&sd=true",
-    "lastLocalSync": "2026-11-05T05:59:21.372Z",
+    "lastLocalSync": "2026-11-06T04:30:56.843Z",
     "lastDriveSync": "2026-11-05T05:59:29.973Z",
     "driveSyncStatus": "synced",
     "driveSyncMessage": "Đã đồng bộ 2 chiều CSDL Học sinh & BM01 lên Google Drive!"
@@ -21,12 +21,28 @@
       "stt": 1,
       "schoolName": "Trường THPT Nguyễn Sinh Sắc",
       "ward": "Phường Long Thạnh, TX. Tân Châu, An Giang",
-      "studentCount": 0,
+      "studentCount": 1,
       "contactName": "Ban Tổ chức Cấp Trường - THPT Nguyễn Sinh Sắc",
       "contactRole": "Giáo viên phụ trách Tin học / Đoàn Thanh niên",
       "contactEmail": "c3nguyensinhsac@angiang.edu.vn",
       "contactPhone": "0918000000"
     }
   ],
-  "students": []
+  "students": [
+    {
+      "id": "NSS-AI-001",
+      "fullName": "Nguyễn Trọng Phúc",
+      "dob": "13/08/2009",
+      "gender": "Nam",
+      "className": "12A6",
+      "cccd": "089209020129",
+      "phone": "0813041348",
+      "email": "trongphucnguyen1308@gmail.com",
+      "examLang": "Tiếng Việt",
+      "parentName": "Nguyễn Trọng Nghĩa",
+      "parentPhone": "0832233052",
+      "consent": true,
+      "createdAt": "06/11/2026 09:35:50"
+    }
+  ]
 }

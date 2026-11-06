@@ -70,6 +70,40 @@ function KHOI_DONG_VA_CAP_QUYEN_GOOGLE() {
   }
 
   Logger.log('🎉 CẤP QUYỀN THÀNH CÔNG 100%! Giờ Thầy chỉ cần Triển khai phiên bản mới.');
+  DON_DEP_TAT_CA_FILE_TRUNG_LAP();
+}
+
+/**
+ * HÀM DỌN DẸP TỰ ĐỘNG TẤT CẢ FILE TRÙNG LẶP TRÊN GOOGLE DRIVE
+ * Quét toàn bộ thư mục, giữ lại đúng 1 bản mới nhất cho mỗi loại file, dọn dẹp các bản sao thừa.
+ */
+function DON_DEP_TAT_CA_FILE_TRUNG_LAP() {
+  const folder = DriveApp.getFolderById(FOLDER_ID);
+  Logger.log('Bắt đầu dọn dẹp thư mục: ' + folder.getName());
+
+  const targetNames = [XLSX_FILENAME, STUDENTS_XLSX_FILENAME, JSON_STATE_FILENAME];
+  targetNames.forEach(function(name) {
+    const files = folder.getFilesByName(name);
+    const list = [];
+    while (files.hasNext()) {
+      list.push(files.next());
+    }
+    Logger.log('Tệp: ' + name + ' -> Tìm thấy ' + list.length + ' bản.');
+    if (list.length > 1) {
+      // Sắp xếp theo thời gian sửa đổi giảm dần (bản mới nhất ở đầu)
+      list.sort(function(a, b) {
+        return b.getLastUpdated().getTime() - a.getLastUpdated().getTime();
+      });
+      // Giữ lại list[0], đưa các bản cũ vào thùng rác
+      for (let i = 1; i < list.length; i++) {
+        try {
+          list[i].setTrashed(true);
+          Logger.log('  -> Đã đưa bản sao cũ ' + list[i].getId() + ' vào thùng rác.');
+        } catch (_) {}
+      }
+    }
+  });
+  Logger.log('🎉 ĐÃ DỌN DẸP SẠCH SẼ TOÀN BỘ FILE TRÙNG LẶP!');
 }
 
 function doGet(e) {
@@ -274,11 +308,17 @@ function jsonResponse(obj) {
  * Nếu chưa cấp quyền PATCH, an toàn tạo file mới và dọn dẹp file cũ.
  */
 function upsertBinaryFile(folder, filename, blob) {
+  const existingFiles = [];
   const files = folder.getFilesByName(filename);
-  if (files.hasNext()) {
-    const file = files.next();
+  while (files.hasNext()) {
+    existingFiles.push(files.next());
+  }
+
+  if (existingFiles.length > 0) {
+    const primaryFile = existingFiles[0];
+    let inPlaceSuccess = false;
     try {
-      const fileId = file.getId();
+      const fileId = primaryFile.getId();
       const url = 'https://www.googleapis.com/upload/drive/v3/files/' + fileId + '?uploadType=media';
       const res = UrlFetchApp.fetch(url, {
         method: 'PATCH',
@@ -290,17 +330,25 @@ function upsertBinaryFile(folder, filename, blob) {
         muteHttpExceptions: true
       });
       if (res.getResponseCode() >= 200 && res.getResponseCode() < 300) {
-        return file;
+        inPlaceSuccess = true;
       }
     } catch (e) {
       Logger.log('Lỗi patch in-place: ' + e.toString());
     }
 
-    // Fallback nếu chưa cấp quyền UrlFetchApp: tạo file mới để đảm bảo dữ liệu LUÔN ĐƯỢC LƯU
+    if (inPlaceSuccess) {
+      // Dọn dẹp tất cả các bản sao thừa còn lại, chỉ giữ lại primaryFile duy nhất!
+      for (let i = 1; i < existingFiles.length; i++) {
+        try { existingFiles[i].setTrashed(true); } catch (_) {}
+      }
+      return primaryFile;
+    }
+
+    // Nếu không patch in-place được: tạo 1 file mới và dọn dẹp TẤT CẢ các file cũ
     const newFile = folder.createFile(blob);
-    try {
-      file.setTrashed(true);
-    } catch (_) {}
+    for (let i = 0; i < existingFiles.length; i++) {
+      try { existingFiles[i].setTrashed(true); } catch (_) {}
+    }
     return newFile;
   } else {
     return folder.createFile(blob);

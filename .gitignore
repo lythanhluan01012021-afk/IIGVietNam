@@ -2,4 +2,6 @@ node_modules/
 data/original_banners/
 *.log
 .DS_Store
+~$*
+*.tmp
 

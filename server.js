@@ -651,7 +651,11 @@ async function writeToLocalExcel() {
       'xl/sharedStrings.xml': sharedStringsXml
     });
 
-    await writeStudentsDatabaseExcel();
+    try {
+      await writeStudentsDatabaseExcel();
+    } catch (eSt) {
+      console.warn('Lưu ý ghi file CSDL học sinh Excel (có thể do đang mở file trên máy):', eSt.message);
+    }
 
     // Nếu thư mục Google Drive Desktop (G:\My Drive\IIGVN) đang mở trên máy -> Đồng bộ trực tiếp cả 2 file ngay lập tức
     if (fs.existsSync(MOUNTED_DRIVE_DIR)) {
@@ -802,17 +806,34 @@ async function pullFromGoogleDrive() {
       const res = await fetch(`${appState.meta.appsScriptUrl}?action=pull`);
       const payload = await res.json();
       if (payload && payload.ok) {
+        // 1. Luôn nạp mảng dữ liệu students & bm01Rows từ Cloud State JSON trước
+        if (payload.data) {
+          if (Array.isArray(payload.data.students)) {
+            appState.students = payload.data.students;
+          }
+          if (Array.isArray(payload.data.bm01Rows) && payload.data.bm01Rows.length > 0) {
+            appState.bm01Rows = payload.data.bm01Rows;
+          }
+          if (payload.data.meta) {
+            appState.meta = { ...appState.meta, ...payload.data.meta };
+          }
+        }
+        // 2. Ghi đè file BM01 template nếu có
         if (payload.xlsxBase64) {
           isWritingExcel = true;
-          fs.writeFileSync(EXCEL_PATH, Buffer.from(payload.xlsxBase64, 'base64'));
+          try {
+            fs.writeFileSync(EXCEL_PATH, Buffer.from(payload.xlsxBase64, 'base64'));
+          } catch (_) {}
           lastWriteTimestamp = Date.now();
           setTimeout(() => { isWritingExcel = false; }, 800);
-          await readFromLocalExcel();
-        } else if (payload.data) {
-          if (payload.data.bm01Rows) appState.bm01Rows = payload.data.bm01Rows;
-          if (payload.data.students) appState.students = payload.data.students;
-          await writeToLocalExcel();
         }
+        // 3. Đảm bảo số lượng luôn đồng bộ chính xác với số học sinh thực tế
+        if (appState.meta.autoCountFromStudents && appState.bm01Rows.length > 0) {
+          appState.bm01Rows[0].studentCount = appState.students.length;
+        }
+        // 4. Tạo lại các file Excel nội bộ từ dữ liệu học sinh mới nhất
+        await writeToLocalExcel();
+
         appState.meta.lastDriveSync = new Date().toISOString();
         appState.meta.driveSyncStatus = 'synced';
         appState.meta.driveSyncMessage = 'Đã tải và đồng bộ dữ liệu mới nhất từ Google Drive về máy!';
@@ -899,12 +920,17 @@ if (!IS_VERCEL && fs.existsSync(EXCEL_PATH)) {
   });
 }
 
-async function ensureCloudStateLoaded() {
-  if (IS_VERCEL && !hasHydratedFromCloud) {
-    hasHydratedFromCloud = true;
-    try {
-      await pullFromGoogleDrive();
-    } catch (_) {}
+let lastCloudPullTime = 0;
+async function ensureCloudStateLoaded(force = false) {
+  if (IS_VERCEL) {
+    const now = Date.now();
+    if (force || !hasHydratedFromCloud || now - lastCloudPullTime > 10000) {
+      hasHydratedFromCloud = true;
+      lastCloudPullTime = now;
+      try {
+        await pullFromGoogleDrive();
+      } catch (_) {}
+    }
   }
 }
 
