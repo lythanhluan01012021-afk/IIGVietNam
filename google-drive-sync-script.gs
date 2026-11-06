@@ -485,6 +485,175 @@ function TRUY_VET_VA_TONG_HOP_TOAN_BO_CSDL_TU_THUNG_RAC() {
   };
 }
 
+/**
+ * HÀM RÀ SOÁT & TRUY VẾT CHUYÊN SÂU TOÀN BỘ GOOGLE DRIVE (FORENSIC AUDIT)
+ * Quét toàn bộ: Thùng rác (Trash), Thư mục Gốc (Root), Toàn bộ Google Sheets, Forms, XLSX gần đây
+ * Nhằm tìm kiếm xem có bất kỳ học sinh nào từ các lớp khác bị lưu lạc hay không.
+ */
+function QUET_TOAN_BO_DRIVE_TIM_CSDL_HOC_SINH() {
+  Logger.log('================================================================');
+  Logger.log('🔬 BẮT ĐẦU TRUY VẾT CHUYÊN SÂU TOÀN BỘ GOOGLE DRIVE & THÙNG RÁC');
+  Logger.log('================================================================');
+
+  const report = {
+    trashedFilesTotal: 0,
+    trashedFilesAudited: [],
+    recentSpreadsheetsFound: [],
+    formsFound: [],
+    allStudentRecordsDiscovered: [],
+    classesBreakdown: {}
+  };
+
+  const studentMap = {};
+
+  function registerCandidate(st, sourceFile) {
+    if (!st || !st.fullName) return;
+    const name = String(st.fullName).trim();
+    if (!name || name === 'STT' || name.startsWith('Họ và tên')) return;
+
+    let key = '';
+    if (st.cccd && String(st.cccd).trim().length >= 9) {
+      key = 'cccd_' + String(st.cccd).trim();
+    } else if (st.phone && String(st.phone).trim().length >= 8) {
+      key = 'phone_' + String(st.phone).trim();
+    } else {
+      key = 'name_' + name.toLowerCase() + '_' + (st.className || '').toLowerCase().trim();
+    }
+
+    const cls = (st.className || 'Chưa rõ').toUpperCase().trim();
+    if (!report.classesBreakdown[cls]) report.classesBreakdown[cls] = 0;
+
+    if (!studentMap[key]) {
+      report.classesBreakdown[cls]++;
+      studentMap[key] = { ...st, source: sourceFile };
+      Logger.log('  🎯 TÌM THẤY: ' + name + ' | Lớp ' + cls + ' | SĐT: ' + (st.phone || '') + ' | CCCD: ' + (st.cccd || '') + ' (Từ: ' + sourceFile + ')');
+    }
+  }
+
+  // 1. Quét TOÀN BỘ file trong THÙNG RÁC (không giới hạn tên)
+  const trashed = DriveApp.getTrashedFiles();
+  while (trashed.hasNext()) {
+    const f = trashed.next();
+    report.trashedFilesTotal++;
+    const name = f.getName();
+    const mime = f.getMimeType();
+    const size = f.getSize();
+    const updated = f.getLastUpdated().toISOString();
+
+    const isRelevant = (
+      name.indexOf('CSDL') !== -1 ||
+      name.indexOf('BM01') !== -1 ||
+      name.indexOf('Nguyen-Sinh-Sac') !== -1 ||
+      name.indexOf('sync-state') !== -1 ||
+      name.indexOf('dang-ky') !== -1 ||
+      name.indexOf('Dang-Ky') !== -1 ||
+      mime === MimeType.GOOGLE_SHEETS ||
+      mime === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+
+    if (isRelevant) {
+      report.trashedFilesAudited.push({ name: name, id: f.getId(), size: size, updated: updated, mime: mime });
+
+      if (name.indexOf('.json') !== -1) {
+        try {
+          const json = JSON.parse(f.getBlob().getDataAsString('UTF-8'));
+          if (json && Array.isArray(json.students)) {
+            json.students.forEach(function(s) { registerCandidate(s, 'Trash JSON: ' + name); });
+          }
+        } catch (_) {}
+      } else if (name.indexOf('.xlsx') !== -1) {
+        const parsed = parseXlsxStudentsFromBlob(f.getBlob());
+        parsed.forEach(function(s) { registerCandidate(s, 'Trash XLSX: ' + name); });
+      } else if (mime === MimeType.GOOGLE_SHEETS) {
+        try {
+          const ss = SpreadsheetApp.openById(f.getId());
+          const sheet = ss.getSheets()[0];
+          const rows = sheet.getDataRange().getValues();
+          for (let r = 1; r < rows.length; r++) {
+            if (rows[r][2]) {
+              registerCandidate({
+                id: rows[r][1] || '',
+                fullName: rows[r][2] || '',
+                dob: rows[r][3] || '',
+                gender: rows[r][4] || '',
+                className: rows[r][5] || '',
+                cccd: rows[r][6] || '',
+                phone: rows[r][7] || '',
+                email: rows[r][8] || '',
+                examLang: rows[r][9] || 'Tiếng Việt',
+                parentName: rows[r][10] || '',
+                parentPhone: rows[r][11] || '',
+                createdAt: rows[r][12] || ''
+              }, 'Trash Sheet: ' + name);
+            }
+          }
+        } catch (_) {}
+      }
+    }
+  }
+
+  // 2. Tìm kiếm toàn bộ Google Sheets trong Drive (kể cả ngoài thư mục IIGVN)
+  try {
+    const sheets = DriveApp.getFilesByType(MimeType.GOOGLE_SHEETS);
+    let countSheets = 0;
+    while (sheets.hasNext() && countSheets < 30) {
+      const sf = sheets.next();
+      countSheets++;
+      const sName = sf.getName();
+      if (sName.indexOf('CSDL') !== -1 || sName.indexOf('Sinh Sắc') !== -1 || sName.indexOf('AI') !== -1 || sName.indexOf('Đăng ký') !== -1) {
+        report.recentSpreadsheetsFound.push({ name: sName, id: sf.getId(), url: sf.getUrl(), updated: sf.getLastUpdated().toISOString() });
+        try {
+          const ss = SpreadsheetApp.openById(sf.getId());
+          const sh = ss.getSheets()[0];
+          const data = sh.getDataRange().getValues();
+          for (let r = 1; r < data.length; r++) {
+            if (data[r][2]) {
+              registerCandidate({
+                id: data[r][1] || '',
+                fullName: data[r][2] || '',
+                dob: data[r][3] || '',
+                gender: data[r][4] || '',
+                className: data[r][5] || '',
+                cccd: data[r][6] || '',
+                phone: data[r][7] || '',
+                email: data[r][8] || '',
+                examLang: data[r][9] || 'Tiếng Việt',
+                parentName: data[r][10] || '',
+                parentPhone: data[r][11] || '',
+                createdAt: data[r][12] || ''
+              }, 'Drive Sheet: ' + sName);
+            }
+          }
+        } catch (_) {}
+      }
+    }
+  } catch (errSheets) {
+    Logger.log('Lỗi quét Google Sheets toàn Drive: ' + errSheets.toString());
+  }
+
+  // 3. Tìm kiếm xem có biểu mẫu Google Forms nào liên quan không
+  try {
+    const forms = DriveApp.getFilesByType(MimeType.GOOGLE_FORMS);
+    while (forms.hasNext()) {
+      const frm = forms.next();
+      report.formsFound.push({ name: frm.getName(), id: frm.getId(), updated: frm.getLastUpdated().toISOString() });
+    }
+  } catch (_) {}
+
+  // 4. Tổng kết danh sách học sinh
+  const allList = Object.keys(studentMap).map(function(k) { return studentMap[k]; });
+  report.allStudentRecordsDiscovered = allList;
+
+  Logger.log('================================================================');
+  Logger.log('📋 TỔNG KẾT BÁO CÁO TRUY VẾT CHUYÊN SÂU:');
+  Logger.log('  • Tổng file đã rà soát trong thùng rác: ' + report.trashedFilesAudited.length + ' / ' + report.trashedFilesTotal + ' file');
+  Logger.log('  • Tổng số thí sinh thực tế tìm thấy: ' + allList.length + ' học sinh');
+  Logger.log('  • Phân bổ theo từng lớp: ' + JSON.stringify(report.classesBreakdown));
+  Logger.log('================================================================');
+
+  return report;
+}
+
 function doGet(e) {
   try {
     const folder = DriveApp.getFolderById(FOLDER_ID);
@@ -494,6 +663,12 @@ function doGet(e) {
     if (action === 'trace_and_consolidate') {
       const traceResult = TRUY_VET_VA_TONG_HOP_TOAN_BO_CSDL_TU_THUNG_RAC();
       return jsonResponse(traceResult);
+    }
+
+    // Thao tác rà soát chuyên sâu toàn bộ Drive & Thùng rác
+    if (action === 'deep_audit') {
+      const auditResult = QUET_TOAN_BO_DRIVE_TIM_CSDL_HOC_SINH();
+      return jsonResponse({ ok: true, audit: auditResult });
     }
 
     if (action === 'status') {
