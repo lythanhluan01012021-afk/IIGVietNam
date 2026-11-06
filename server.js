@@ -809,7 +809,26 @@ async function pullFromGoogleDrive() {
         // 1. Luôn nạp mảng dữ liệu students & bm01Rows từ Cloud State JSON trước
         if (payload.data) {
           if (Array.isArray(payload.data.students)) {
-            appState.students = payload.data.students;
+            // Hợp nhất thông minh giữa Local và Google Drive để không bao giờ mất dữ liệu học sinh
+            const currentStudents = appState.students || [];
+            const cloudStudents = payload.data.students || [];
+            const studentMap = new Map();
+            currentStudents.forEach(s => {
+              const key = ((s.cccd || '') + '_' + (s.phone || '') + '_' + (s.fullName || '')).trim().toLowerCase();
+              if (key) studentMap.set(key, s);
+            });
+            cloudStudents.forEach(s => {
+              const key = ((s.cccd || '') + '_' + (s.phone || '') + '_' + (s.fullName || '')).trim().toLowerCase();
+              if (key) {
+                studentMap.set(key, { ...studentMap.get(key), ...s });
+              } else {
+                studentMap.set(s.id || Math.random().toString(), s);
+              }
+            });
+            appState.students = Array.from(studentMap.values());
+            appState.students.forEach((s, idx) => {
+              s.id = `NSS-AI-${String(idx + 1).padStart(3, '0')}`;
+            });
           }
           if (Array.isArray(payload.data.bm01Rows) && payload.data.bm01Rows.length > 0) {
             appState.bm01Rows = payload.data.bm01Rows;
@@ -1246,6 +1265,12 @@ app.get('/api/apps-script-code', (req, res) => {
 // Khởi tạo dữ liệu ban đầu vào file BM01-danh-sach-TS-vong-thi-cap-co-so.xlsx khi chạy máy chủ Local
 if (!IS_VERCEL) {
   (async () => {
+    try {
+      console.log('🔄 Đang kiểm tra & kéo dữ liệu mới nhất từ Google Drive về máy...');
+      await pullFromGoogleDrive();
+    } catch (e) {
+      console.warn('Lưu ý đồng bộ Google Drive khi khởi động:', e.message);
+    }
     await readFromLocalExcel();
     await writeToLocalExcel();
     app.listen(PORT, () => {
@@ -1257,6 +1282,13 @@ if (!IS_VERCEL) {
       console.log(`☁️  Google Drive: ${DRIVE_FOLDER_URL}`);
       console.log(`================================================================`);
     });
+
+    // Tự động kiểm tra & đồng bộ ngầm định kỳ từ Google Drive về máy mỗi 20 giây khi chạy local
+    setInterval(async () => {
+      try {
+        await pullFromGoogleDrive();
+      } catch (_) {}
+    }, 20000);
   })();
 }
 
