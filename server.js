@@ -1079,7 +1079,7 @@ app.post('/api/students/register', async (req, res) => {
       consent
     } = req.body;
 
-    if (!fullName || !dob || !className || !phone || !email || !parentName || !parentPhone) {
+    if (!fullName || !dob || !className || !cccd || !phone || !email || !parentName || !parentPhone) {
       return res.status(400).json({
         ok: false,
         message: 'Vui lòng điền đầy đủ các trường thông tin bắt buộc (*)!'
