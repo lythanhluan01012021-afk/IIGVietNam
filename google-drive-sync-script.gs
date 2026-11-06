@@ -106,6 +106,25 @@ function DON_DEP_TAT_CA_FILE_TRUNG_LAP() {
   Logger.log('🎉 ĐÃ DỌN DẸP SẠCH SẼ TOÀN BỘ FILE TRÙNG LẶP!');
 }
 
+/**
+ * HÀM KHÔI PHỤC TOÀN BỘ FILE TỪ THÙNG RÁC VỀ LẠI THƯ MỤC DRIVE
+ * (Nếu Thầy muốn lấy lại tất cả các bản nháp cũ để kiểm tra đối chiếu)
+ */
+function KHOI_PHUC_TAT_CA_FILE_TU_THUNG_RAC() {
+  const trashed = DriveApp.getTrashedFiles();
+  let count = 0;
+  while (trashed.hasNext()) {
+    const f = trashed.next();
+    const name = f.getName();
+    if (name.indexOf('CSDL-Thi-Sinh-Dang-Ky') !== -1 || name.indexOf('BM01-danh-sach-TS') !== -1) {
+      f.setTrashed(false);
+      count++;
+      Logger.log('Đã khôi phục file: ' + name + ' (ID: ' + f.getId() + ')');
+    }
+  }
+  Logger.log('🎉 HOÀN TẤT! Đã khôi phục ' + count + ' file từ Thùng rác về lại Google Drive.');
+}
+
 function doGet(e) {
   try {
     const folder = DriveApp.getFolderById(FOLDER_ID);
