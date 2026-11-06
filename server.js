@@ -114,6 +114,20 @@ function loadInitialState() {
   return JSON.parse(JSON.stringify(defaultState));
 }
 
+function readJsonState() {
+  const sourceJson = fs.existsSync(DB_JSON_PATH)
+    ? DB_JSON_PATH
+    : fs.existsSync(INITIAL_DB_JSON_PATH)
+    ? INITIAL_DB_JSON_PATH
+    : null;
+  if (sourceJson) {
+    try {
+      return JSON.parse(fs.readFileSync(sourceJson, 'utf8'));
+    } catch (_) {}
+  }
+  return { students: [], bm01Rows: [] };
+}
+
 function saveJsonState() {
   try {
     fs.writeFileSync(DB_JSON_PATH, JSON.stringify(appState, null, 2), 'utf8');

@@ -10,9 +10,9 @@
     "driveFolderUrl": "https://drive.google.com/drive/folders/1a_hJhS5wetmMRktY6qfSVCqNN3pQUuCb?usp=sharing",
     "appsScriptUrl": "https://script.google.com/macros/s/AKfycbykh0lOPK04OGlbq-FgocezIIGs1YdJhOypzmB9gZc6Dm9PSYzhOTx8d3WuxxggLHmBAA/exec",
     "driveFileId": "",
-    "driveFileUrl": "https://docs.google.com/spreadsheets/d/14mQ_mFPXdTAZB_jNG4rC17JF3K8iL9hs/edit?usp=drivesdk&ouid=108381351267098461385&rtpof=true&sd=true",
-    "lastLocalSync": "2026-11-06T05:13:14.631Z",
-    "lastDriveSync": "2026-11-06T05:13:23.448Z",
+    "driveFileUrl": "https://docs.google.com/spreadsheets/d/1GX-3lgsEkUujPKlrwxoSHhIlLxsjsg4J/edit?usp=drivesdk&ouid=108381351267098461385&rtpof=true&sd=true",
+    "lastLocalSync": "2026-11-06T05:43:49.368Z",
+    "lastDriveSync": "2026-11-06T05:44:00.248Z",
     "driveSyncStatus": "synced",
     "driveSyncMessage": "Đã đồng bộ 2 chiều CSDL Học sinh & BM01 lên Google Drive!"
   },
@@ -21,7 +21,7 @@
       "stt": 1,
       "schoolName": "Trường THPT Nguyễn Sinh Sắc",
       "ward": "Phường Long Thạnh, TX. Tân Châu, An Giang",
-      "studentCount": 21,
+      "studentCount": 23,
       "contactName": "Ban Tổ chức Cấp Trường - THPT Nguyễn Sinh Sắc",
       "contactRole": "Giáo viên phụ trách Tin học / Đoàn Thanh niên",
       "contactEmail": "c3nguyensinhsac@angiang.edu.vn",
@@ -343,6 +343,36 @@
       "parentPhone": "0369349887",
       "consent": true,
       "createdAt": "06/11/2026 11:43:17"
+    },
+    {
+      "id": "NSS-AI-022",
+      "fullName": "Test Học Sinh 10A8",
+      "dob": "15/05/2011",
+      "gender": "Nam",
+      "className": "10A8",
+      "cccd": "089311999888",
+      "phone": "0987654321",
+      "email": "test10a8@gmail.com",
+      "examLang": "Tiếng Việt",
+      "parentName": "Phụ huynh 10A8",
+      "parentPhone": "0912345678",
+      "consent": true,
+      "createdAt": "06/11/2026 12:34:58"
+    },
+    {
+      "id": "NSS-AI-023",
+      "fullName": "abc",
+      "dob": "01/01/2012",
+      "gender": "Nam",
+      "className": "10A11",
+      "cccd": "123",
+      "phone": "123",
+      "email": "ldfadfd",
+      "examLang": "Tiếng Việt",
+      "parentName": "fafdsf",
+      "parentPhone": "123",
+      "consent": true,
+      "createdAt": "06/11/2026 12:35:29"
     }
   ]
 }
