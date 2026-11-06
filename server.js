@@ -810,13 +810,19 @@ async function pullFromGoogleDrive() {
         if (payload.data) {
           if (Array.isArray(payload.data.students)) {
             // Hợp nhất thông minh giữa Local và Google Drive để không bao giờ mất dữ liệu học sinh
-            const currentStudents = appState.students || [];
+            const diskState = readJsonState();
+            const localList = (appState.students && appState.students.length >= (diskState.students || []).length)
+              ? appState.students
+              : (diskState.students || []);
             const cloudStudents = payload.data.students || [];
+
             const studentMap = new Map();
-            currentStudents.forEach(s => {
+            // Nạp toàn bộ học sinh local trước
+            localList.forEach(s => {
               const key = ((s.cccd || '') + '_' + (s.phone || '') + '_' + (s.fullName || '')).trim().toLowerCase();
               if (key) studentMap.set(key, s);
             });
+            // Hợp nhất từ Cloud
             cloudStudents.forEach(s => {
               const key = ((s.cccd || '') + '_' + (s.phone || '') + '_' + (s.fullName || '')).trim().toLowerCase();
               if (key) {
@@ -825,10 +831,16 @@ async function pullFromGoogleDrive() {
                 studentMap.set(s.id || Math.random().toString(), s);
               }
             });
+
             appState.students = Array.from(studentMap.values());
             appState.students.forEach((s, idx) => {
               s.id = `NSS-AI-${String(idx + 1).padStart(3, '0')}`;
             });
+
+            // Nếu số học sinh sau khi gộp nhiều hơn số học sinh trên cloud -> Đẩy ngược lại lên Cloud ngay!
+            if (appState.students.length > cloudStudents.length) {
+              setTimeout(() => { syncToGoogleDrive().catch(() => {}); }, 1500);
+            }
           }
           if (Array.isArray(payload.data.bm01Rows) && payload.data.bm01Rows.length > 0) {
             appState.bm01Rows = payload.data.bm01Rows;
@@ -1308,14 +1320,11 @@ app.get('/api/apps-script-code', (req, res) => {
 // Khởi tạo dữ liệu ban đầu vào file BM01-danh-sach-TS-vong-thi-cap-co-so.xlsx khi chạy máy chủ Local
 if (!IS_VERCEL) {
   (async () => {
-    try {
-      console.log('🔄 Đang kiểm tra & kéo dữ liệu mới nhất từ Google Drive về máy...');
-      await pullFromGoogleDrive();
-    } catch (e) {
-      console.warn('Lưu ý đồng bộ Google Drive khi khởi động:', e.message);
-    }
-    await readFromLocalExcel();
+    // Đảm bảo ghi đồng bộ toàn bộ học sinh local ra các file Excel & G:\My Drive
     await writeToLocalExcel();
+    // Đẩy đồng bộ lên Google Drive đám mây
+    syncToGoogleDrive().catch(() => {});
+
     app.listen(PORT, () => {
       console.log(`================================================================`);
       console.log(`🚀 CỔNG THÔNG TIN & ĐĂNG KÝ CUỘC THI AI OR BEHIND 2026 - 2027`);
