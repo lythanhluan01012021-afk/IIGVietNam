@@ -125,10 +125,376 @@ function KHOI_PHUC_TAT_CA_FILE_TU_THUNG_RAC() {
   Logger.log('🎉 HOÀN TẤT! Đã khôi phục ' + count + ' file từ Thùng rác về lại Google Drive.');
 }
 
+/**
+ * HÀM PHÂN TÍCH NHỊ PHÂN FILE .XLSX TRỰC TIẾP TRÊN BỘ NHỚ APPS SCRIPT
+ * Trích xuất dữ liệu học sinh từ các file .xlsx kể cả khi file đang nằm trong thùng rác
+ */
+function parseXlsxStudentsFromBlob(blob) {
+  const list = [];
+  try {
+    const unzipped = Utilities.unzip(blob);
+    let sharedStringsXml = '';
+    let sheetXml = '';
+    for (let i = 0; i < unzipped.length; i++) {
+      const entryName = unzipped[i].getName();
+      if (entryName === 'xl/sharedStrings.xml') {
+        sharedStringsXml = unzipped[i].getDataAsString('UTF-8');
+      } else if (entryName === 'xl/worksheets/sheet1.xml') {
+        sheetXml = unzipped[i].getDataAsString('UTF-8');
+      }
+    }
+    if (!sheetXml) return list;
+
+    // Phân tích Shared Strings (Chuỗi dùng chung)
+    const sst = [];
+    const siRegex = /<si\b[\s\S]*?<\/si>/g;
+    let siMatch;
+    while ((siMatch = siRegex.exec(sharedStringsXml)) !== null) {
+      const siStr = siMatch[0];
+      const tMatches = siStr.match(/<t\b[^>]*>([\s\S]*?)<\/t>/g) || [];
+      const text = tMatches.map(function(t) {
+        return t.replace(/<t\b[^>]*>/, '').replace(/<\/t>/, '');
+      }).join('');
+      sst.push(text);
+    }
+
+    // Phân tích dòng dữ liệu trong sheet1.xml
+    const rowRegex = /<row\b[^>]*r="(\d+)"[\s\S]*?<\/row>/g;
+    let rMatch;
+    while ((rMatch = rowRegex.exec(sheetXml)) !== null) {
+      const rowNum = parseInt(rMatch[1], 10);
+      if (rowNum < 5) continue; // Bỏ qua tiêu đề 4 dòng đầu
+
+      const rowStr = rMatch[0];
+      const cellRegex = /<c\b[^>]*r="([A-Z]+)\d+"([^>]*)>([\s\S]*?)<\/c>/g;
+      let cMatch;
+      const cells = {};
+      while ((cMatch = cellRegex.exec(rowStr)) !== null) {
+        const col = cMatch[1];
+        const attrStr = cMatch[2] || '';
+        const bodyStr = cMatch[3] || '';
+        const isString = /t="s"/.test(attrStr);
+        const vMatch = bodyStr.match(/<v>([\s\S]*?)<\/v>/);
+        let val = '';
+        if (vMatch) {
+          const rawVal = vMatch[1];
+          if (isString) {
+            const idx = parseInt(rawVal, 10);
+            val = sst[idx] !== undefined ? sst[idx] : rawVal;
+          } else {
+            val = rawVal;
+          }
+        } else {
+          const isMatch = bodyStr.match(/<is><t>([\s\S]*?)<\/t><\/is>/);
+          if (isMatch) val = isMatch[1];
+        }
+        cells[col] = String(val).trim();
+      }
+
+      const fullName = cells['C'] || '';
+      if (fullName && fullName !== 'Họ và tên học sinh (*)' && fullName !== 'STT') {
+        list.push({
+          id: cells['B'] || '',
+          fullName: fullName,
+          dob: cells['D'] || '',
+          gender: cells['E'] || 'Nam',
+          className: cells['F'] || '',
+          cccd: cells['G'] || '',
+          phone: cells['H'] || '',
+          email: cells['I'] || '',
+          examLang: cells['J'] || 'Tiếng Việt',
+          parentName: cells['K'] || '',
+          parentPhone: cells['L'] || '',
+          consent: true,
+          createdAt: cells['N'] || ''
+        });
+      }
+    }
+  } catch (err) {
+    Logger.log('Lỗi phân tích file XLSX blob: ' + err.toString());
+  }
+  return list;
+}
+
+/**
+ * HÀM TRUY VẾT & TỔNG HỢP TOÀN BỘ CSDL TỪ THÙNG RÁC VÀ THƯ MỤC DRIVE
+ * Quét sạch từng file trong thùng rác và Drive, trích xuất tất cả học sinh đã từng đăng ký,
+ * gom toàn bộ vào 1 file CSDL duy nhất, cập nhật Google Sheet và đồng bộ 2 chiều!
+ */
+function TRUY_VET_VA_TONG_HOP_TOAN_BO_CSDL_TU_THUNG_RAC() {
+  Logger.log('=====================================================');
+  Logger.log('🔍 BẮT ĐẦU QUÁ TRÌNH TRUY VẾT CSDL TỪ THÙNG RÁC DRIVE');
+  Logger.log('=====================================================');
+
+  const folder = DriveApp.getFolderById(FOLDER_ID);
+  const studentMap = {};
+  let filesScanned = 0;
+  let trashFilesFound = 0;
+
+  function addStudent(st, source) {
+    if (!st || !st.fullName) return;
+    const name = String(st.fullName).trim();
+    if (!name || name === 'STT' || name.startsWith('Họ và tên')) return;
+
+    // Khóa định danh duy nhất: ưu tiên CCCD -> SĐT -> Tên + Lớp
+    let key = '';
+    if (st.cccd && String(st.cccd).trim().length >= 9) {
+      key = 'cccd_' + String(st.cccd).trim();
+    } else if (st.phone && String(st.phone).trim().length >= 8) {
+      key = 'phone_' + String(st.phone).trim();
+    } else {
+      key = 'name_' + name.toLowerCase() + '_' + (st.className || '').toLowerCase().trim();
+    }
+
+    if (!studentMap[key]) {
+      studentMap[key] = {
+        id: st.id || '',
+        fullName: name,
+        dob: st.dob || '',
+        gender: st.gender || 'Nam',
+        className: st.className || '',
+        cccd: st.cccd || '',
+        phone: st.phone || '',
+        email: st.email || '',
+        examLang: st.examLang || 'Tiếng Việt',
+        parentName: st.parentName || '',
+        parentPhone: st.parentPhone || '',
+        consent: true,
+        createdAt: st.createdAt || '',
+        source: source
+      };
+      Logger.log('  [+] Tìm thấy thí sinh: ' + name + ' | Lớp ' + (st.className || '') + ' | CCCD: ' + (st.cccd || '') + ' (' + source + ')');
+    } else {
+      // Hợp nhất dữ liệu để lấy đủ các trường thông tin nhất
+      const existing = studentMap[key];
+      Object.keys(st).forEach(function(k) {
+        if (!existing[k] && st[k]) existing[k] = st[k];
+      });
+    }
+  }
+
+  // 1. Quét các file đang có trong thư mục IIGVN
+  const activeFiles = folder.getFiles();
+  while (activeFiles.hasNext()) {
+    const f = activeFiles.next();
+    filesScanned++;
+    const name = f.getName();
+    if (name === JSON_STATE_FILENAME) {
+      try {
+        const json = JSON.parse(f.getBlob().getDataAsString('UTF-8'));
+        if (json && Array.isArray(json.students)) {
+          json.students.forEach(function(s) { addStudent(s, 'Drive Folder: ' + name); });
+        }
+      } catch (_) {}
+    } else if (name === STUDENTS_XLSX_FILENAME || name.indexOf('CSDL-Thi-Sinh-Dang-Ky') !== -1) {
+      const parsed = parseXlsxStudentsFromBlob(f.getBlob());
+      parsed.forEach(function(s) { addStudent(s, 'Drive Folder: ' + name); });
+    }
+  }
+
+  // 2. Quét toàn bộ file trong THÙNG RÁC của Google Drive
+  const trashed = DriveApp.getTrashedFiles();
+  while (trashed.hasNext()) {
+    const f = trashed.next();
+    const name = f.getName();
+    const isTarget = (
+      name.indexOf('CSDL-Thi-Sinh-Dang-Ky') !== -1 ||
+      name.indexOf('BM01-danh-sach-TS') !== -1 ||
+      name.indexOf('BM01-sync-state') !== -1 ||
+      name.indexOf('CSDL_Hoc_Sinh_Dang_Ky') !== -1
+    );
+
+    if (isTarget) {
+      trashFilesFound++;
+      filesScanned++;
+      const srcName = 'Thùng rác: ' + name;
+
+      if (name.indexOf('.json') !== -1) {
+        try {
+          const json = JSON.parse(f.getBlob().getDataAsString('UTF-8'));
+          if (json && Array.isArray(json.students)) {
+            json.students.forEach(function(s) { addStudent(s, srcName); });
+          }
+        } catch (_) {}
+      } else if (name.indexOf('.xlsx') !== -1) {
+        const parsed = parseXlsxStudentsFromBlob(f.getBlob());
+        parsed.forEach(function(s) { addStudent(s, srcName); });
+      } else if (f.getMimeType() === MimeType.GOOGLE_SHEETS) {
+        try {
+          const ss = SpreadsheetApp.openById(f.getId());
+          const sheet = ss.getSheets()[0];
+          const rows = sheet.getDataRange().getValues();
+          for (let r = 1; r < rows.length; r++) {
+            const row = rows[r];
+            if (row[2]) {
+              addStudent({
+                id: row[1] || '',
+                fullName: row[2] || '',
+                dob: row[3] || '',
+                gender: row[4] || '',
+                className: row[5] || '',
+                cccd: row[6] || '',
+                phone: row[7] || '',
+                email: row[8] || '',
+                examLang: row[9] || 'Tiếng Việt',
+                parentName: row[10] || '',
+                parentPhone: row[11] || '',
+                createdAt: row[12] || ''
+              }, srcName);
+            }
+          }
+        } catch (_) {}
+      }
+    }
+  }
+
+  // 3. Chuẩn hóa và sắp xếp lại danh sách học sinh theo thời gian
+  const rawList = Object.keys(studentMap).map(function(k) { return studentMap[k]; });
+  rawList.sort(function(a, b) {
+    const tA = a.createdAt || '';
+    const tB = b.createdAt || '';
+    return tA.localeCompare(tB);
+  });
+
+  const consolidatedStudents = rawList.map(function(st, idx) {
+    return {
+      id: 'NSS-AI-' + String(idx + 1).padStart(3, '0'),
+      fullName: st.fullName,
+      dob: st.dob || '',
+      gender: st.gender || 'Nam',
+      className: st.className || '',
+      cccd: st.cccd || '',
+      phone: st.phone || '',
+      email: st.email || '',
+      examLang: st.examLang || 'Tiếng Việt',
+      parentName: st.parentName || '',
+      parentPhone: st.parentPhone || '',
+      consent: true,
+      createdAt: st.createdAt || ''
+    };
+  });
+
+  Logger.log('-----------------------------------------------------');
+  Logger.log('📊 KẾT QUẢ TRUY VẾT & HỢP NHẤT:');
+  Logger.log('  - Tổng số file quét trong thùng rác: ' + trashFilesFound);
+  Logger.log('  - Tổng số thí sinh hợp nhất: ' + consolidatedStudents.length + ' học sinh');
+  consolidatedStudents.forEach(function(s, i) {
+    Logger.log('    ' + (i + 1) + '. ' + s.fullName + ' | ' + s.className + ' | ' + s.dob + ' | CCCD: ' + s.cccd + ' | SĐT: ' + s.phone);
+  });
+  Logger.log('-----------------------------------------------------');
+
+  // 4. Ghi trực tiếp danh sách hợp nhất vào Google Sheet "CSDL_Hoc_Sinh_Dang_Ky_THPT_Nguyen_Sinh_Sac"
+  let gsheetUrl = '';
+  try {
+    let ss = null;
+    const sheetFiles = folder.getFilesByName(GSHEET_NAME);
+    if (sheetFiles.hasNext()) {
+      ss = SpreadsheetApp.openById(sheetFiles.next().getId());
+    } else {
+      ss = SpreadsheetApp.create(GSHEET_NAME);
+      const ssFile = DriveApp.getFileById(ss.getId());
+      folder.addFile(ssFile);
+      DriveApp.getRootFolder().removeFile(ssFile);
+    }
+    gsheetUrl = ss.getUrl();
+    const sheet = ss.getSheets()[0];
+    sheet.setName('DS Thí Sinh Đăng Ký');
+    sheet.clearContents();
+
+    const headers = [
+      'STT', 'Mã ĐK', 'Họ và tên học sinh', 'Ngày sinh', 'Giới tính', 'Lớp',
+      'Số CCCD / Định danh', 'SĐT Học sinh', 'Email nhận code Gmetrix',
+      'Ngôn ngữ bài thi', 'Họ tên Phụ huynh', 'SĐT Phụ huynh', 'Thời gian đăng ký'
+    ];
+    const rows = [headers];
+    consolidatedStudents.forEach(function(st, idx) {
+      rows.push([
+        idx + 1,
+        st.id,
+        st.fullName,
+        st.dob,
+        st.gender,
+        st.className,
+        st.cccd,
+        st.phone,
+        st.email,
+        st.examLang,
+        st.parentName,
+        st.parentPhone,
+        st.createdAt
+      ]);
+    });
+    sheet.getRange(1, 1, rows.length, headers.length).setValues(rows);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#dbeafe');
+    Logger.log('✅ Đã cập nhật toàn bộ ' + consolidatedStudents.length + ' thí sinh vào Google Sheet: ' + gsheetUrl);
+  } catch (sheetErr) {
+    Logger.log('Lỗi cập nhật Google Sheet: ' + sheetErr.toString());
+  }
+
+  // 5. Cập nhật file trạng thái BM01-sync-state.json trong thư mục Drive
+  try {
+    let stateObj = {
+      meta: {
+        soGddt: 'tỉnh An Giang',
+        nguoiPhuTrach: 'Thầy/Cô Phụ trách CNTT & Đoàn Trường',
+        chucVuPhuTrach: 'Cán bộ phụ trách cuộc thi',
+        dienThoaiPhuTrach: '02963 822 xxx',
+        emailPhuTrach: 'c3nguyensinhsac@angiang.edu.vn',
+        autoCountFromStudents: true,
+        driveFolderId: FOLDER_ID,
+        driveFolderUrl: 'https://drive.google.com/drive/folders/' + FOLDER_ID + '?usp=sharing',
+        appsScriptUrl: ScriptApp.getService().getUrl() || '',
+        lastDriveSync: new Date().toISOString(),
+        driveSyncStatus: 'synced',
+        driveSyncMessage: 'Đã truy vết & hợp nhất CSDL toàn diện từ Thùng rác Google Drive!'
+      },
+      bm01Rows: [
+        {
+          stt: 1,
+          schoolName: 'Trường THPT Nguyễn Sinh Sắc',
+          ward: 'Phường Long Thạnh, TX. Tân Châu, An Giang',
+          studentCount: consolidatedStudents.length,
+          contactName: 'Ban Tổ chức Cấp Trường - THPT Nguyễn Sinh Sắc',
+          contactRole: 'Giáo viên phụ trách Tin học / Đoàn Thanh niên',
+          contactEmail: 'c3nguyensinhsac@angiang.edu.vn',
+          contactPhone: '0918000000'
+        }
+      ],
+      students: consolidatedStudents
+    };
+    const jsonStr = JSON.stringify(stateObj, null, 2);
+    const existingState = folder.getFilesByName(JSON_STATE_FILENAME);
+    if (existingState.hasNext()) {
+      existingState.next().setContent(jsonStr);
+    } else {
+      folder.createFile(JSON_STATE_FILENAME, jsonStr, MimeType.PLAIN_TEXT);
+    }
+    Logger.log('✅ Đã cập nhật file BM01-sync-state.json với ' + consolidatedStudents.length + ' thí sinh.');
+  } catch (stateErr) {
+    Logger.log('Lỗi cập nhật sync-state: ' + stateErr.toString());
+  }
+
+  Logger.log('🎉 TRUY VẾT & HỢP NHẤT TOÀN DIỆN THÀNH CÔNG RỰC RỠ!');
+  return {
+    ok: true,
+    trashFilesScanned: trashFilesFound,
+    totalFilesScanned: filesScanned,
+    studentsCount: consolidatedStudents.length,
+    students: consolidatedStudents,
+    gsheetUrl: gsheetUrl
+  };
+}
+
 function doGet(e) {
   try {
     const folder = DriveApp.getFolderById(FOLDER_ID);
     const action = (e && e.parameter && e.parameter.action) || 'pull';
+
+    // Thao tác truy vết và hợp nhất CSDL từ Thùng rác
+    if (action === 'trace_and_consolidate') {
+      const traceResult = TRUY_VET_VA_TONG_HOP_TOAN_BO_CSDL_TU_THUNG_RAC();
+      return jsonResponse(traceResult);
+    }
 
     if (action === 'status') {
       const files = folder.getFilesByName(XLSX_FILENAME);

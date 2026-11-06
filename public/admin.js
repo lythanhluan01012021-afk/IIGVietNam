@@ -1,4 +1,4 @@
-﻿let adminState = {
+let adminState = {
   meta: {},
   bm01Rows: [],
   students: []
@@ -500,6 +500,32 @@ async function copyAppsScriptFromAdmin() {
   if (data.code) {
     await navigator.clipboard.writeText(data.code);
     showToast('📋 Đã sao chép mã google-drive-sync-script.gs!');
+  }
+}
+
+async function triggerTraceTrash() {
+  if (!confirm('Hệ thống sẽ quét sâu toàn bộ Thùng rác của Google Drive và thư mục đám mây để truy vết, trích xuất tất cả học sinh đã từng đăng ký và hợp nhất vào 1 file duy nhất.\n\nThầy/Cô có muốn bắt đầu không?')) {
+    return;
+  }
+  showToast('🔍 Đang truy vết sâu toàn bộ Thùng rác Google Drive...');
+  try {
+    const res = await fetch('/api/admin/trace-trash', {
+      method: 'POST',
+      headers: authHeaders()
+    });
+    const data = await res.json();
+    if (data.ok) {
+      if (data.state) applyAdminState(data.state);
+      alert(`🎉 TRUY VẾT & HỢP NHẤT THÀNH CÔNG!\n\n` +
+            `• Số file đã quét trong thùng rác: ${data.trashFilesScanned}\n` +
+            `• Tổng số thí sinh hợp nhất: ${data.studentsCount} học sinh\n\n` +
+            `Toàn bộ dữ liệu đã được lưu song song vào file CSDL trên Google Drive, file Excel trên máy (E:\\IIGVN), và cập nhật trực tiếp lên màn hình!`);
+      showToast(`✅ Đã truy vết & hợp nhất ${data.studentsCount} thí sinh!`);
+    } else {
+      alert('⚠️ ' + (data.message || 'Lỗi khi truy vết thùng rác Google Drive!'));
+    }
+  } catch (err) {
+    alert('❌ Lỗi kết nối: ' + err.message);
   }
 }
 

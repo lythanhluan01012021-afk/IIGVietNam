@@ -1236,6 +1236,49 @@ app.post('/api/sync', requireAdminAuth, async (req, res) => {
   res.json({ ok: true, sync: pushRes, state: appState });
 });
 
+// Truy vết & Tổng hợp toàn bộ dữ liệu từ Thùng rác Google Drive & thư mục đám mây
+app.post('/api/admin/trace-trash', requireAdminAuth, async (req, res) => {
+  try {
+    const scriptUrl = appState.meta.appsScriptUrl;
+    if (!scriptUrl) {
+      return res.status(400).json({ ok: false, message: 'Chưa cấu hình Google Apps Script URL!' });
+    }
+    const response = await fetch(`${scriptUrl}?action=trace_and_consolidate&t=${Date.now()}`);
+    const result = await response.json();
+    if (!result || !result.ok) {
+      return res.status(500).json({ ok: false, message: 'Lỗi truy vết từ Google Drive: ' + (result?.error || 'Không rõ') });
+    }
+
+    if (Array.isArray(result.students)) {
+      appState.students = result.students;
+      if (appState.meta.autoCountFromStudents && appState.bm01Rows.length > 0) {
+        appState.bm01Rows[0].studentCount = appState.students.length;
+      }
+      appState.meta.lastDriveSync = new Date().toISOString();
+      appState.meta.driveSyncStatus = 'synced';
+      appState.meta.driveSyncMessage = `Đã truy vết & hợp nhất thành công ${result.studentsCount} thí sinh từ Google Drive!`;
+
+      saveJsonState();
+      await writeToLocalExcel();
+      broadcastSSE({
+        type: 'state_updated',
+        state: appState,
+        notification: `Đã truy vết & hợp nhất thành công ${result.studentsCount} thí sinh từ Google Drive (quét ${result.trashFilesScanned} file trong thùng rác)!`
+      });
+    }
+
+    res.json({
+      ok: true,
+      studentsCount: result.studentsCount,
+      trashFilesScanned: result.trashFilesScanned,
+      students: result.students,
+      state: appState
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: 'Lỗi máy chủ khi truy vết: ' + err.message });
+  }
+});
+
 // Tải file BM01-danh-sach-TS-vong-thi-cap-co-so.xlsx trực tiếp từ trình duyệt (Giữ nguyên 100% định dạng mẫu gốc)
 app.get('/api/download-bm01', async (req, res) => {
   await ensureCloudStateLoaded();
