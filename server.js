@@ -731,7 +731,7 @@ function uploadOrUpdateDriveFile(localFilePath, searchKeyword) {
  * 1) BM01-danh-sach-TS-vong-thi-cap-co-so.xlsx (Mẫu chuẩn IIG)
  * 2) CSDL-Thi-Sinh-Dang-Ky-THPT-Nguyen-Sinh-Sac.xlsx (CSDL chi tiết thông tin học sinh đăng ký)
  */
-async function syncToGoogleDrive() {
+async function syncToGoogleDrive(opts = {}) {
   appState.meta.driveSyncStatus = 'syncing';
   broadcastSSE({ type: 'sync_status', meta: appState.meta });
 
@@ -745,6 +745,8 @@ async function syncToGoogleDrive() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           folderId: DRIVE_FOLDER_ID,
+          action: opts.action || 'sync',
+          deleteId: opts.deleteId || null,
           data: {
             meta: appState.meta,
             bm01Rows: appState.bm01Rows,
@@ -756,6 +758,12 @@ async function syncToGoogleDrive() {
       });
       const result = await res.json();
       if (result && result.ok) {
+        if (result.masterStudents && Array.isArray(result.masterStudents) && result.masterStudents.length >= appState.students.length) {
+          appState.students = result.masterStudents;
+          if (appState.meta.autoCountFromStudents && appState.bm01Rows.length > 0) {
+            appState.bm01Rows[0].studentCount = appState.students.length;
+          }
+        }
         appState.meta.lastDriveSync = new Date().toISOString();
         appState.meta.driveSyncStatus = 'synced';
         appState.meta.driveFileUrl = result.xlsxUrl || DRIVE_FOLDER_URL;
@@ -1160,9 +1168,9 @@ app.put('/api/students/:id', requireAdminAuth, async (req, res) => {
   await writeToLocalExcel();
   broadcastSSE({ type: 'state_updated', state: appState });
   if (IS_VERCEL) {
-    await syncToGoogleDrive().catch(() => {});
+    await syncToGoogleDrive({ action: 'delete_student', deleteId: id }).catch(() => {});
   } else {
-    syncToGoogleDrive().catch(() => {});
+    syncToGoogleDrive({ action: 'delete_student', deleteId: id }).catch(() => {});
   }
   res.json({ ok: true, state: appState });
 });
@@ -1181,9 +1189,9 @@ app.delete('/api/students/:id', requireAdminAuth, async (req, res) => {
   await writeToLocalExcel();
   broadcastSSE({ type: 'state_updated', state: appState });
   if (IS_VERCEL) {
-    await syncToGoogleDrive().catch(() => {});
+    await syncToGoogleDrive({ action: 'delete_student', deleteId: id }).catch(() => {});
   } else {
-    syncToGoogleDrive().catch(() => {});
+    syncToGoogleDrive({ action: 'delete_student', deleteId: id }).catch(() => {});
   }
   res.json({ ok: true, state: appState });
 });

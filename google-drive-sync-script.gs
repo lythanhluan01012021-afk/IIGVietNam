@@ -563,6 +563,79 @@ function doPost(e) {
     let patchError = null;
     let sheetError = null;
 
+    // =========================================================================
+    // 0. CƠ CHẾ BẢO VỆ CSDL TUYỆT ĐỐI (SMART MERGE - CHỈ TÍCH LŨY, KHÔNG XÓA MẤT)
+    // Đọc danh sách học sinh hiện có trên Drive và hợp nhất với danh sách gửi lên
+    // =========================================================================
+    let masterStudents = [];
+    const stateFiles = folder.getFilesByName(JSON_STATE_FILENAME);
+    let existingStateFile = null;
+    if (stateFiles.hasNext()) {
+      existingStateFile = stateFiles.next();
+      try {
+        const exData = JSON.parse(existingStateFile.getBlob().getDataAsString('UTF-8'));
+        if (exData && Array.isArray(exData.students)) {
+          masterStudents = exData.students;
+        }
+      } catch (_) {}
+    }
+
+    if (payload.data && Array.isArray(payload.data.students)) {
+      const incoming = payload.data.students;
+      const studentMap = {};
+
+      function makeKey(s) {
+        if (!s) return '';
+        if (s.cccd && String(s.cccd).trim().length >= 9) return 'cccd_' + String(s.cccd).trim();
+        if (s.phone && String(s.phone).trim().length >= 8) return 'phone_' + String(s.phone).trim();
+        return 'name_' + String(s.fullName || '').toLowerCase().trim() + '_' + String(s.className || '').toLowerCase().trim();
+      }
+
+      // Nạp học sinh hiện có trên Drive vào Map
+      masterStudents.forEach(function(s) {
+        const k = makeKey(s);
+        if (k) studentMap[k] = s;
+      });
+
+      // Kiểm tra xem có phải hành động Admin xóa học sinh không
+      if (payload.action === 'delete_student' && payload.deleteId) {
+        masterStudents = masterStudents.filter(function(s) { return s.id !== payload.deleteId; });
+        studentMap = {};
+        masterStudents.forEach(function(s) {
+          const k = makeKey(s);
+          if (k) studentMap[k] = s;
+        });
+      } else {
+        // Mặc định: Luôn hợp nhất (Học sinh mới sẽ được thêm vào, học sinh cũ được bảo toàn 100%)
+        incoming.forEach(function(s) {
+          const k = makeKey(s);
+          if (k) {
+            studentMap[k] = Object.assign({}, studentMap[k] || {}, s);
+          } else if (s.fullName) {
+            studentMap['raw_' + Math.random()] = s;
+          }
+        });
+      }
+
+      // Sắp xếp thứ tự theo thời gian đăng ký và đánh số lại chuẩn xác
+      const mergedList = Object.keys(studentMap).map(function(k) { return studentMap[k]; });
+      mergedList.sort(function(a, b) {
+        const tA = a.createdAt || '';
+        const tB = b.createdAt || '';
+        return tA.localeCompare(tB);
+      });
+
+      masterStudents = mergedList.map(function(st, idx) {
+        st.id = 'NSS-AI-' + String(idx + 1).padStart(3, '0');
+        return st;
+      });
+
+      payload.data.students = masterStudents;
+      if (payload.data.bm01Rows && payload.data.bm01Rows.length > 0) {
+        payload.data.bm01Rows[0].studentCount = masterStudents.length;
+      }
+    }
+
     // 1. Lưu/Cập nhật file BM01-danh-sach-TS-vong-thi-cap-co-so.xlsx trên Google Drive
     if (payload.xlsxBase64) {
       try {
@@ -675,7 +748,9 @@ function doPost(e) {
       message: 'Đã đồng bộ CSDL BM01 lên Google Drive thành công!',
       folderId: FOLDER_ID,
       xlsxUrl: xlsxUrl,
-      updatedAt: updatedTime
+      updatedAt: updatedTime,
+      studentsCount: masterStudents.length,
+      masterStudents: masterStudents
     });
   } catch (err) {
     return jsonResponse({ ok: false, error: err.toString() });
